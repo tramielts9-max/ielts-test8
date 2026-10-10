@@ -1,6 +1,6 @@
 /**
  * reading/js-r/evaluator-r.js - Bộ máy chấm điểm chuyên biệt cho IELTS Reading
- * (BẢN FULL ĐẦY ĐỦ 100% - HỖ TRỢ MA TRẬN RADIO GRID & MULTI-SELECT CHOOSE TWO)
+ * (BẢN FULL ĐẦY ĐỦ 100% NGUYÊN GỐC + HỖ TRỢ BẢNG MA TRẬN)
  */
 import { CONFIG } from '../../js/config.js';
 import { stateManager } from '../../js/state.js';
@@ -51,24 +51,24 @@ export class TestEvaluatorReading {
 
       if (isCorrect) score++;
 
-      // CẬP NHẬT HIỂN THỊ KẾT QUẢ ĐÚNG / SAI
+      // GÁN CLASS CHUẨN ĐÚNG/SAI CŨ (GIỮ NGUYÊN GỐC 100%)
       if (qDiv) {
         const resDiv = qDiv.querySelector('.result') || document.getElementById(`${qKey}_result`);
         const expDiv = qDiv.querySelector('.explanation');
         if (isCorrect) {
-          if (resDiv) resDiv.innerHTML = "<span style='color:#16a34a; font-weight:800; font-size:13.5px;'>✓ Đúng</span>";
-          qDiv.style.borderColor = '#22C55E';
-          qDiv.style.backgroundColor = '#F0FDF4';
+          if (resDiv) resDiv.innerHTML = "<span class='correct-text' style='color:#16a34a; font-weight:700;'>✓ Đúng</span>";
+          qDiv.classList.add('correct-border');
+          qDiv.classList.remove('incorrect-border');
         } else {
           const expStr = Array.isArray(expected) ? expected.join(' / ') : expected;
-          if (resDiv) resDiv.innerHTML = `<span style='color:#dc2626; font-weight:800; font-size:13.5px;'>✗ Sai (Đáp án đúng: <b>${expStr}</b>)</span>`;
-          qDiv.style.borderColor = '#EF4444';
-          qDiv.style.backgroundColor = '#FFF5F5';
+          if (resDiv) resDiv.innerHTML = `<span class='incorrect-text' style='color:#dc2626; font-weight:700;'>✗ Sai (Đáp án: <b>${expStr}</b>)</span>`;
+          qDiv.classList.add('incorrect-border');
+          qDiv.classList.remove('correct-border');
         }
         if (expDiv) expDiv.style.display = 'block';
       }
 
-      // NẾU LÀ HÀNG TRONG BẢNG MA TRẬN RADIO GRID
+      // XỬ LÝ NẾU LÀ HÀNG TRONG BẢNG MA TRẬN
       const matrixRow = document.getElementById(`${qKey}_row`);
       if (matrixRow) {
         matrixRow.style.backgroundColor = isCorrect ? '#F0FDF4' : '#FFF5F5';
@@ -81,7 +81,7 @@ export class TestEvaluatorReading {
         badge.classList.toggle('status-incorrect', !isCorrect);
       }
 
-      details.push(`${qKey.toUpperCase()}: ${userVal || 'Trống'} (${isCorrect ? 'ĐÚNG' : 'SAI'})`);
+      details.push(`${qKey.toUpperCase()}: ${userVal || 'Trống'} (${isCorrect ? 'ĐÚNG' : 'SAI'}) | Nghĩ: ${thoughtEl?.value || 'N/A'}`);
     }
 
     return { score, total, details: details.join('\n'), snapshot };
@@ -109,7 +109,6 @@ export class TestEvaluatorReading {
       ...resultData.snapshot
     };
 
-    // LƯU QUA STATEMANAGER CHUẨN ĐÃ ĐƯỢC NÂNG CẤP
     stateManager.saveAttempt(attemptSnapshot);
 
     if (CONFIG.AI_AND_SHEET_URL) {
@@ -138,12 +137,12 @@ export class TestEvaluatorReading {
 
     const postBox = document.createElement('div');
     postBox.id = 'btnPostSaveContainer';
-    postBox.style.cssText = "margin-top: 20px; padding: 14px; background: var(--bg-subcard); border: 2px solid var(--border-color); border-radius: 14px; text-align: center; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;";
+    postBox.style.cssText = "margin-top: 25px; padding: 16px; background: var(--bg-subcard); border: 1.5px solid var(--border-color); border-radius: 8px; text-align: center; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;";
     postBox.innerHTML = `
-      <button type="button" id="btnPostSave" style="background: #16a34a; color: white; border: none; padding: 10px 18px; font-weight: 800; font-size: 13.5px; border-radius: 10px; cursor: pointer;">
+      <button type="button" id="btnPostSave" style="background: #16a34a; color: white; border: none; padding: 10px 18px; font-weight: 700; font-size: 14px; border-radius: 6px; cursor: pointer;">
         💾 Lưu vào lịch sử (Bản Sau sửa)
       </button>
-      <button type="button" id="btnResetTest" style="background: #ef4444; color: white; border: none; padding: 10px 18px; font-weight: 800; font-size: 13.5px; border-radius: 10px; cursor: pointer;">
+      <button type="button" id="btnResetTest" style="background: #ef4444; color: white; border: none; padding: 10px 18px; font-weight: 700; font-size: 14px; border-radius: 6px; cursor: pointer;">
         🔄 Xóa hết để làm lại từ đầu
       </button>
     `;
