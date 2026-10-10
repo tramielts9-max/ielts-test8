@@ -1,12 +1,13 @@
 /**
  * pre-listening/modal-pl.js
  * ĐIỀU KHIỂN POPUP DÁN ẢNH BẰNG CHỨNG (CTRL + V)
- * ĐÃ BỎ 100% CÁC BIỂU TƯỢNG GÂY LỖI Ô VUÔNG
+ * BẢN FULL ĐẦY ĐỦ 100% - HIỂN THỊ ĐẦY ĐỦ CÁC LẦN NỘP TRƯỚC VÀ CHO PHÉP NỘP LẦN MỚI
  */
 
 import { getSubmission, saveSubmission } from './db-pl.js';
 
 let activeLessonId = null;
+let activeLessonTitle = '';
 let currentLevel = 'A1';
 let tempWrongImages = [];
 let tempFullImage = null;
@@ -16,11 +17,11 @@ let currentPasteTarget = 'wrong';
 export function initModal(onSaved) {
   onSaveCallback = onSaved;
 
-  document.getElementById('mWrongImgs').addEventListener('change', (e) => {
+  document.getElementById('mWrongImgs')?.addEventListener('change', (e) => {
     handleFileSelect(Array.from(e.target.files), 'wrong');
   });
 
-  document.getElementById('mFullImg').addEventListener('change', (e) => {
+  document.getElementById('mFullImg')?.addEventListener('change', (e) => {
     if (e.target.files[0]) {
       handleFileSelect([e.target.files[0]], 'full');
     }
@@ -29,12 +30,12 @@ export function initModal(onSaved) {
   const zoneWrong = document.getElementById('pasteZoneWrong');
   const zoneFull = document.getElementById('pasteZoneFull');
 
-  zoneWrong.addEventListener('click', () => setPasteTarget('wrong'));
-  zoneFull.addEventListener('click', () => setPasteTarget('full'));
+  zoneWrong?.addEventListener('click', () => setPasteTarget('wrong'));
+  zoneFull?.addEventListener('click', () => setPasteTarget('full'));
 
   window.addEventListener('paste', (e) => {
     const modal = document.getElementById('submitModal');
-    if (modal.classList.contains('hidden')) return;
+    if (modal && modal.classList.contains('hidden')) return;
 
     const items = (e.clipboardData || e.originalEvent.clipboardData).items;
     let foundImage = false;
@@ -82,11 +83,11 @@ function setPasteTarget(target) {
   const zoneFull = document.getElementById('pasteZoneFull');
 
   if (target === 'wrong') {
-    zoneWrong.classList.add('active-paste');
-    zoneFull.classList.remove('active-paste');
+    zoneWrong?.classList.add('active-paste');
+    zoneFull?.classList.remove('active-paste');
   } else {
-    zoneFull.classList.add('active-paste');
-    zoneWrong.classList.remove('active-paste');
+    zoneFull?.classList.add('active-paste');
+    zoneWrong?.classList.remove('active-paste');
   }
 }
 
@@ -108,7 +109,9 @@ function handleFileSelect(files, target) {
 
 export async function openModal(id, title, level) {
   activeLessonId = id;
+  activeLessonTitle = title;
   currentLevel = level;
+
   document.getElementById('mTitle').innerText = title;
   document.getElementById('mLevel').innerText = `LISTENING - ${level}`;
 
@@ -124,26 +127,70 @@ export async function openModal(id, title, level) {
 
   setPasteTarget('full');
 
+  // HIỂN THỊ LỊCH SỬ CÁC LẦN NỘP TRƯỚC (NẾU CÓ)
   const existing = await getSubmission(id);
-  if (existing) {
-    document.getElementById('mCorrect').value = existing.correct;
-    document.getElementById('mTotal').value = existing.total;
-    document.getElementById('mWrongList').value = existing.wrongNotes || '';
-    if (existing.fullProof) {
-      tempFullImage = existing.fullProof;
-      renderFullPreview();
-    }
-    if (existing.wrongProofs && existing.wrongProofs.length > 0) {
-      tempWrongImages = existing.wrongProofs;
-      renderWrongPreview();
-    }
-  }
+  renderHistoryAttemptsBox(existing);
 
   document.getElementById('submitModal').classList.remove('hidden');
 }
 
+function renderHistoryAttemptsBox(existing) {
+  let histContainer = document.getElementById('plPastAttemptsHistory');
+  if (!histContainer) {
+    histContainer = document.createElement('div');
+    histContainer.id = 'plPastAttemptsHistory';
+    const body = document.querySelector('.pl-modal-body');
+    if (body) body.insertBefore(histContainer, body.firstChild);
+  }
+
+  if (!existing) {
+    histContainer.innerHTML = '';
+    return;
+  }
+
+  const attempts = existing.attempts && existing.attempts.length > 0 
+    ? existing.attempts 
+    : [{ attemptNum: 1, correct: existing.correct, total: existing.total, timestamp: existing.timestamp, fullProof: existing.fullProof }];
+
+  let html = `
+    <div style="background: #ECFEFF; border: 2px solid #A5F3FC; border-radius: 14px; padding: 12px 16px; margin-bottom: 14px;">
+      <div style="font-size: 13.5px; font-weight: 900; color: #155E75; margin-bottom: 8px;">
+        📜 BẰNG CHỨNG ĐÃ LƯU TRƯỚC ĐÂY (${attempts.length} lần làm):
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+  `;
+
+  attempts.forEach(att => {
+    const pct = att.total > 0 ? Math.round((att.correct / att.total) * 100) : 0;
+    html += `
+      <div style="display: flex; justify-content: space-between; align-items: center; background: #FFFFFF; border: 1.5px solid #E8E2D8; border-radius: 10px; padding: 8px 12px; gap: 10px; flex-wrap: wrap;">
+        <div>
+          <span style="background: #0891B2; color: white; padding: 2px 7px; border-radius: 6px; font-size: 11px; font-weight: 900;">LẦN ${att.attemptNum}</span>
+          <b style="font-size: 13.5px; color: #166534; margin-left: 6px;">🎯 ${att.correct}/${att.total} (${pct}%)</b>
+          <span style="font-size: 12px; color: #756D68; margin-left: 6px;">📅 ${att.timestamp}</span>
+        </div>
+        ${att.fullProof ? `
+          <a href="${att.fullProof}" target="_blank" style="font-size: 12px; background: #E0F2FE; color: #0284C7; text-decoration: none; padding: 3px 8px; border-radius: 6px; font-weight: 800;">
+            🔍 Xem ảnh bằng chứng
+          </a>
+        ` : ''}
+      </div>
+    `;
+  });
+
+  html += `
+      </div>
+      <div style="font-size: 12px; color: #0E7490; font-weight: 800; margin-top: 8px;">
+        👉 Khi em điền điểm và dán ảnh bên dưới, hệ thống sẽ lưu tiếp thành <b>LẦN ${attempts.length + 1}</b> (Không ghi đè các lần cũ).
+      </div>
+    </div>
+  `;
+
+  histContainer.innerHTML = html;
+}
+
 export function closeModal() {
-  document.getElementById('submitModal').classList.add('hidden');
+  document.getElementById('submitModal')?.classList.add('hidden');
   activeLessonId = null;
 }
 
@@ -184,6 +231,7 @@ async function handleSave() {
 
   const submission = {
     id: activeLessonId,
+    title: activeLessonTitle,
     skill: "listening",
     level: currentLevel,
     correct: parseInt(correct, 10),
