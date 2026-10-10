@@ -1,13 +1,16 @@
 /**
  * curriculum-system/ui-system.js
- * GIAO DIỆN LỘ TRÌNH, LỊCH CHUYÊN CẦN 5 MÀU & HỖ TRỢ LÀM LẠI BÀI (LẦN 1, LẦN 2...)
+ * GIAO DIỆN LỘ TRÌNH, LỊCH CHUYÊN CẦN & BANNER LỊCH SỬ PASTEL ĐỔI MÀU THEO HỌC PHẦN
+ * (BẢN ĐẦY ĐỦ 100% - KHÔNG CẮT BỚT BẤT KỲ TÍNH NĂNG NÀO)
  */
 
 import { curriculumEngineSystem } from './engine-system.js';
 import { MASTER_CURRICULUM_SYSTEM } from './manifest-system.js';
 import { analyzeStudentDiagnostic } from './ai-service-system.js';
+import { CONFIG } from '../js/config.js';
+import { stateManager } from '../js/state.js';
 
-const CLOUD_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyNErQQFdciAQM0k9KUrACtpX7rxKkopjChYAC2Ubwj5MGzFOeekDEGs8C1n7P9cNR6vg/exec";
+const CLOUD_SCRIPT_URL = CONFIG.DRIVE_STORAGE_URL;
 
 let diagRecognition = null;
 let isDiagRecording = false;
@@ -84,13 +87,13 @@ class CurriculumUISystem {
 
   checkIsAdmin() {
     const email = (localStorage.getItem('ielts_student_email') || '').toLowerCase().trim();
-    return email.includes('admin') || (window.CONFIG?.ADMIN_EMAILS || []).map(e => e.toLowerCase()).includes(email);
+    return email.includes('admin') || (CONFIG?.ADMIN_EMAILS || []).map(e => e.toLowerCase()).includes(email);
   }
 
-  // ĐỐI SOÁT TẤT CẢ CÁC LẦN NỘP BÀI (LẦN 1, LẦN 2...)
+  // ĐỐI SOÁT TẤT CẢ CÁC LẦN NỘP BÀI (HỖ TRỢ NHIỀU ATTEMPTS)
   getNodeCompletionInfo(node) {
     try {
-      const history = JSON.parse(localStorage.getItem('ielts_local_history') || '[]');
+      const history = stateManager.getLocalHistory();
       
       const matches = history.filter(item => {
         if (!item) return false;
@@ -110,8 +113,7 @@ class CurriculumUISystem {
       });
 
       if (matches.length > 0) {
-        // Sắp xếp các lần thi theo thời gian (Lần 1 là cũ nhất, Lần sau mới hơn)
-        matches.sort((a, b) => (a.id || '').localeCompare(b.id || ''));
+        matches.sort((a, b) => stateManager.extractEpoch(a) - stateManager.extractEpoch(b));
         const first = matches[0];
         const latest = matches.length > 1 ? matches[matches.length - 1] : null;
 
@@ -136,6 +138,17 @@ class CurriculumUISystem {
 
   isNodeCompletedInHistory(node) {
     return this.getNodeCompletionInfo(node).isCompleted;
+  }
+
+  getModuleTheme(moduleType, url = '', title = '') {
+    const detected = moduleType || stateManager.detectModuleType(url, title);
+    return CONFIG.MODULES[detected]?.theme || {
+      bg: "#F8FAFC",
+      border: "#E2E8F0",
+      tagBg: "#64748B",
+      text: "#1E293B",
+      label: "Luyện Tập"
+    };
   }
 
   toggleMicrophone() {
@@ -374,7 +387,6 @@ class CurriculumUISystem {
 
     container.innerHTML = `
       <div class="cs-container">
-        
         <!-- BANNER ĐỒNG BỘ SỐ NGÀY ĐỘNG (${totalDaysCount} NGÀY) -->
         <div style="background: linear-gradient(135deg, #8B1518 0%, #B91C1C 100%); border-radius: 18px; padding: 20px 24px; margin-bottom: 22px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; box-shadow: 0 4px 0 #5E0C0E; color: white;">
           <div>
@@ -438,7 +450,7 @@ class CurriculumUISystem {
           </div>
         </div>
 
-        <!-- DANH SÁCH BÀI TẬP HÔM NAY: HIỆN CẢ LẦN 1 VÀ LẦN 2, NÚT LÀM LẠI HOẠT ĐỘNG BÌNH THƯỜNG -->
+        <!-- DANH SÁCH BÀI TẬP HÔM NAY -->
         <div class="cs-task-list">
           ${currentDayPlan.nodes.map(node => {
             const compInfo = this.getNodeCompletionInfo(node);
@@ -508,24 +520,25 @@ class CurriculumUISystem {
   }
 
   // =========================================================================
-  // LỊCH CHUYÊN CẦN 5 MÀU (HEATMAP)
+  // LỊCH CHUYÊN CẦN & BANNER LỊCH SỬ TÔNG MÀU PASTEL CHUẨN MÔN (ĐÃ FIX ĐẦY ĐỦ)
   // =========================================================================
   renderTodayHistoryAndCalendar(attempts = [], email = '') {
-    this.cachedAttempts = attempts;
+    // Sắp xếp thời gian giảm dần (MỚI NHẤT LÊN ĐẦU TIÊN)
+    this.cachedAttempts = stateManager.sortAttemptsDescending(attempts);
     this.cachedEmail = email;
 
     const container = document.getElementById('historyResultsList');
     if (!container) return;
 
-    const selectedAttempts = attempts.filter(att => (att.timestamp || '').includes(this.selectedDateStr));
+    const selectedAttempts = this.cachedAttempts.filter(att => (att.timestamp || '').includes(this.selectedDateStr));
 
     const todayStr = this.getFormattedDate(new Date());
-    const todayAttemptsCount = attempts.filter(att => (att.timestamp || '').includes(todayStr)).length;
+    const todayAttemptsCount = this.cachedAttempts.filter(att => (att.timestamp || '').includes(todayStr)).length;
     const badge = document.getElementById('totalAttemptsBadge');
     if (badge) badge.innerText = `${todayAttemptsCount} bài hôm nay`;
 
     const uniqueDates = new Set();
-    attempts.forEach(att => {
+    this.cachedAttempts.forEach(att => {
       const m = att.timestamp?.match(/(\d{2}\/\d{2}\/\d{4})/);
       if (m) uniqueDates.add(m[1]);
     });
@@ -535,16 +548,15 @@ class CurriculumUISystem {
       streakBadge.innerHTML = `<i class="fa-solid fa-fire"></i> ${streakCount} NGÀY`;
     }
 
-    const calHtml = this.generateMonthCalendarHtml(attempts);
-
+    const calHtml = this.generateMonthCalendarHtml(this.cachedAttempts);
     const isToday = this.selectedDateStr === todayStr;
     const displayDateLabel = isToday ? `Hôm nay (${this.selectedDateStr})` : `Ngày ${this.selectedDateStr}`;
 
     let listHtml = `
       <div style="margin-top: 20px; border-top: 2px dashed #E8E2D8; padding-top: 18px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
           <b style="font-size: 16px; color: #8B1518;">
-            📝 Bài tập đã nộp: ${displayDateLabel} (${selectedAttempts.length} bài)
+            📝 Danh sách nộp bài: ${displayDateLabel} (${selectedAttempts.length} bài)
           </b>
           <button type="button" onclick="window.curriculumUI.toggleListCollapse()" class="cs-cal-btn" style="cursor: pointer; padding: 6px 14px; font-size: 13px;">
             ${this.isListCollapsed ? 'Mở rộng ▼' : 'Thu gọn ▲'}
@@ -558,24 +570,35 @@ class CurriculumUISystem {
       listHtml += `
         <div style="text-align: center; padding: 22px 14px; background: #FAF7F2; border-radius: 16px; border: 2px dashed #E8E2D8;">
           <div style="font-size: 26px; margin-bottom: 4px;">📅</div>
-          <b style="color: #261F1D; font-size: 15px;">Không có bài làm nào trong ngày ${this.selectedDateStr}</b>
-          <div style="font-size: 13px; color: #756D68; margin-top: 3px; font-weight: 700;">Nhấp vào ô có màu trên lịch để xem lại bài nhé!</div>
+          <b style="color: #261F1D; font-size: 15px;">Chưa có bài nộp nào trong ngày ${this.selectedDateStr}</b>
+          <div style="font-size: 13px; color: #756D68; margin-top: 3px; font-weight: 700;">Nhấp vào các ô có màu trên lịch để xem lại bài nhé!</div>
         </div>
       `;
     } else {
       selectedAttempts.forEach(att => {
         const reviewLink = this.resolveReviewPageUrl(att.pageUrl, att.id, email);
+        const th = this.getModuleTheme(att.moduleType, att.pageUrl, att.testTitle);
+
         listHtml += `
-          <div class="attempt-item-card" style="background: #FFFFFF; border: 2px solid #E8E2D8; border-bottom: 4px solid #D3CBC0; border-radius: 16px; padding: 14px 18px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-            <div>
-              <b style="font-size: 15px; color: #261F1D;">📝 ${att.testTitle}</b>
-              <div style="font-size: 13px; font-weight: 700; color: #756D68; margin-top: 3px;">
+          <div class="history-item-banner" style="background: ${th.bg}; border: 2px solid ${th.border}; border-bottom: 4px solid ${th.border}; border-radius: 16px; padding: 14px 18px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+            <div style="flex: 1; min-width: 240px;">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                <span style="background: ${th.tagBg}; color: #FFFFFF; font-size: 11px; font-weight: 900; padding: 2px 8px; border-radius: 6px; text-transform: uppercase;">
+                  ${th.label}
+                </span>
+                <b style="font-size: 15px; color: ${th.text};">${att.testTitle}</b>
+              </div>
+              <div style="font-size: 13px; font-weight: 700; color: #64748B;">
                 ⏱️ Nộp lúc: <b>${att.timestamp}</b> • Làm trong: <b>${att.timeSpent || 'N/A'}</b>
               </div>
             </div>
             <div style="display: flex; align-items: center; gap: 10px;">
-              <span class="score-pill" style="background: #16A34A; color: white; padding: 5px 12px; border-radius: 12px; font-weight: 800; font-size: 13px;">Điểm: ${att.score}</span>
-              <a href="${reviewLink}" target="_blank" class="btn-review" style="background: #0284C7; color: white; text-decoration: none; padding: 7px 14px; border-radius: 12px; font-size: 13px; font-weight: 800;">👁️ Xem bài</a>
+              <span class="score-pill" style="background: ${th.tagBg}; color: white; padding: 6px 12px; border-radius: 12px; font-weight: 900; font-size: 13.5px;">
+                Điểm: ${att.score}
+              </span>
+              <a href="${reviewLink}" target="_blank" class="btn-review" style="background: #FFFFFF; color: ${th.text}; border: 1.5px solid ${th.border}; border-bottom: 3px solid ${th.border}; text-decoration: none; padding: 6px 14px; border-radius: 12px; font-size: 13px; font-weight: 900; display: inline-flex; align-items: center; gap: 5px;">
+                👁️ Xem chi tiết
+              </a>
             </div>
           </div>
         `;
@@ -668,22 +691,12 @@ class CurriculumUISystem {
         </div>
 
         <div class="cs-legend-bar">
-          <span style="color: #756D68; font-size: 13.5px; margin-right: 6px;">Mức độ hoàn thành:</span>
-          <div class="cs-legend-item">
-            <span class="cs-legend-dot cal-color-zero"></span> <span>0 bài</span>
-          </div>
-          <div class="cs-legend-item">
-            <span class="cs-legend-dot cal-color-low"></span> <span>1 bài</span>
-          </div>
-          <div class="cs-legend-item">
-            <span class="cs-legend-dot cal-color-mid"></span> <span>2 bài</span>
-          </div>
-          <div class="cs-legend-item">
-            <span class="cs-legend-dot cal-color-full"></span> <span>3-4 bài (Chuẩn)</span>
-          </div>
-          <div class="cs-legend-item">
-            <span class="cs-legend-dot cal-color-over"></span> <span>5+ bài (Vượt chỉ tiêu 🔥)</span>
-          </div>
+          <span style="color: #756D68; font-size: 13.5px; margin-right: 6px;">Mức độ cày:</span>
+          <div class="cs-legend-item"><span class="cs-legend-dot cal-color-zero"></span> <span>0 bài</span></div>
+          <div class="cs-legend-item"><span class="cs-legend-dot cal-color-low"></span> <span>1 bài</span></div>
+          <div class="cs-legend-item"><span class="cs-legend-dot cal-color-mid"></span> <span>2 bài</span></div>
+          <div class="cs-legend-item"><span class="cs-legend-dot cal-color-full"></span> <span>3-4 bài</span></div>
+          <div class="cs-legend-item"><span class="cs-legend-dot cal-color-over"></span> <span>5+ bài 🔥</span></div>
         </div>
       </div>
     `;
@@ -697,9 +710,7 @@ class CurriculumUISystem {
   toggleListCollapse() {
     this.isListCollapsed = !this.isListCollapsed;
     const body = document.getElementById('csSelectedDateListBody');
-    if (body) {
-      body.style.display = this.isListCollapsed ? 'none' : 'block';
-    }
+    if (body) body.style.display = this.isListCollapsed ? 'none' : 'block';
   }
 
   changeCalMonth(delta) {
@@ -746,7 +757,8 @@ class CurriculumUISystem {
   }
 
   resolveReviewPageUrl(pageUrl, id, email) {
-    let target = pageUrl || 'reading/runner-reading.html';
+    if (!pageUrl) return `reading/runner-reading.html?attemptId=${id}&email=${encodeURIComponent(email)}`;
+    let target = pageUrl;
     if (target.startsWith('runner-reading.html')) target = 'reading/' + target;
     if (target.startsWith('runner-listening.html')) target = 'listening/' + target;
     const sep = target.includes('?') ? '&' : '?';
