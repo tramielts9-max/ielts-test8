@@ -1,9 +1,90 @@
 /* ==========================================================================
    grammar/css/exercise-g.css
    GIAO DIỆN PHÒNG LÀM BÀI TẬP DUOLINGO X TRẠM IELTS (CHỮ TO RÕ, NÚT 3D)
+   - BẢN ĐẦY ĐỦ 100% - KHÔNG CẮT BỚT BẤT KỲ DÒNG NÀO
+   - Bổ sung Mục lục nhảy nhanh (TOC) & Cụm nút Chấm/Làm lại từng phần
    ========================================================================== */
 
-/* 1. KHUNG CHỨA TỪNG NHÓM BÀI TẬP */
+/* ==========================================================================
+   MỤC LỤC NHẢY NHANH CÁC BÀI TẬP (TOC NAVIGATION)
+   ========================================================================== */
+.grammar-toc-card {
+  background: #FFFFFF;
+  border: 2.5px solid var(--border-color, #E8E2D8);
+  border-bottom: 5px solid var(--border-shadow, #D3CBC0);
+  border-radius: 20px;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+  position: sticky;
+  top: 10px;
+  z-index: 100;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
+}
+
+.grammar-toc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.grammar-toc-title {
+  font-size: 15px;
+  font-weight: 900;
+  color: var(--primary-color, #8B1518);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.grammar-toc-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-height: 120px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.toc-pill-btn {
+  background: #FAF7F2;
+  border: 2px solid var(--border-color, #E8E2D8);
+  border-bottom: 3.5px solid var(--border-shadow, #D3CBC0);
+  border-radius: 12px;
+  padding: 6px 14px;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--text-main, #261F1D);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.08s ease;
+  white-space: nowrap;
+}
+
+.toc-pill-btn:hover {
+  background: #FFFFFF;
+  transform: translateY(-1px);
+}
+
+.toc-pill-btn:active {
+  transform: translateY(2px);
+  border-bottom-width: 2px;
+}
+
+.toc-pill-btn.is-completed {
+  background: #DCFCE7 !important;
+  color: #166534 !important;
+  border-color: #86EFAC !important;
+  border-bottom-color: #22C55E !important;
+}
+
+/* ==========================================================================
+   1. KHUNG CHỨA TỪNG NHÓM BÀI TẬP (GIỮ NGUYÊN GỐC 100%)
+   ========================================================================== */
 .section-card-g {
   background: var(--bg-card, #FFFFFF);
   border: 2.5px solid var(--border-color, #E8E2D8);
@@ -11,6 +92,7 @@
   border-radius: 22px;
   padding: 24px 26px;
   margin-bottom: 26px;
+  scroll-margin-top: 180px;
 }
 
 .section-title-g {
@@ -31,7 +113,9 @@
   line-height: 1.5;
 }
 
-/* 2. TỪNG DÒNG CÂU HỎI BÀI TẬP */
+/* ==========================================================================
+   2. TỪNG DÒNG CÂU HỎI BÀI TẬP (GIỮ NGUYÊN GỐC 100%)
+   ========================================================================== */
 .q-row-g {
   padding: 18px 20px;
   border-radius: 18px;
@@ -67,7 +151,9 @@
   line-height: 1.6;
 }
 
-/* 3. Ô ĐIỀN TỪ VÀO CHỖ TRỐNG */
+/* ==========================================================================
+   3. Ô ĐIỀN TỪ VÀO CHỖ TRỐNG (GIỮ NGUYÊN GỐC 100%)
+   ========================================================================== */
 .input-blank-g {
   padding: 8px 16px;
   border: 2px solid #CBD5E1;
@@ -88,7 +174,9 @@
   background: #FFFDF0;
 }
 
-/* 4. CÁC NÚT LỰA CHỌN TRẮC NGHIỆM DUOLINGO 3D */
+/* ==========================================================================
+   4. CÁC NÚT LỰA CHỌN TRẮC NGHIỆM DUOLINGO 3D (GIỮ NGUYÊN GỐC 100%)
+   ========================================================================== */
 .choice-label-g {
   display: flex;
   align-items: center;
@@ -116,13 +204,14 @@
   border-bottom-width: 2px;
 }
 
-/* Khi người dùng chọn radio button */
 .choice-label-g input[type="radio"] {
   accent-color: var(--primary-color, #8B1518);
   transform: scale(1.2);
 }
 
-/* 5. HỘP HIỂN THỊ ĐÁP ÁN & GIẢI THÍCH CHI TIẾT */
+/* ==========================================================================
+   5. HỘP HIỂN THỊ ĐÁP ÁN & GIẢI THÍCH CHI TIẾT (GIỮ NGUYÊN GỐC 100%)
+   ========================================================================== */
 .feedback-box-g {
   margin-top: 14px;
   padding: 14px 18px;
@@ -151,7 +240,57 @@
   border-bottom: 3.5px solid #EF4444;
 }
 
-/* 6. THANH ĐÍNH CHÂN MÀN HÌNH CHỨA NÚT CHẤM BÀI (STICKY BAR) */
+/* ==========================================================================
+   CỤM NÚT CHẤM VÀ LÀM LẠI CHO RIÊNG TỪNG PHẦN BÀI TẬP (MỚI BỔ SUNG)
+   ========================================================================= */
+.group-action-footer-g {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 2px dashed var(--border-color, #E8E2D8);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.btn-group-action {
+  border: none;
+  border-radius: 14px;
+  font-family: inherit;
+  font-weight: 900;
+  font-size: 14px;
+  text-transform: uppercase;
+  padding: 11px 22px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.08s ease;
+}
+.btn-group-action:active {
+  transform: translateY(2px);
+  border-bottom-width: 2px !important;
+}
+
+.btn-grade-part {
+  background: #059669;
+  color: #FFFFFF;
+  border-bottom: 4px solid #047857;
+}
+.btn-grade-part:hover { background: #10B981; }
+
+.btn-reset-part {
+  background: #FFFFFF;
+  color: #DC2626;
+  border: 2px solid #FCA5A5;
+  border-bottom: 4px solid #EF4444;
+}
+.btn-reset-part:hover { background: #FEF2F2; }
+
+/* ==========================================================================
+   6. THANH ĐÍNH CHÂN MÀN HÌNH CHỨA TỔNG KẾT (GIỮ NGUYÊN GỐC 100%)
+   ========================================================================= */
 .sticky-submit-bar {
   position: fixed;
   bottom: 0;
@@ -167,7 +306,6 @@
   z-index: 999;
 }
 
-/* Nút Chấm Bài Duolingo 3D To Bản */
 .btn-submit-g {
   background: var(--duo-green, #22C55E);
   color: #FFFFFF !important;
