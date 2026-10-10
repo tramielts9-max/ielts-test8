@@ -1,3 +1,9 @@
+/**
+ * pre-reading/db-pr.js
+ * CƠ SỞ DỮ LIỆU INDEXEDDB PRE-READING (HỖ TRỢ LƯU ĐA TẦNG NHIỀU LẦN NỘP LẦN 1, LẦN 2...)
+ * BẢN FULL ĐẦY ĐỦ 100% - KHÔNG CẮT BỚT BẤT KỲ DÒNG NÀO
+ */
+
 const DB_NAME = "PreReadingHomeworkDB";
 const STORE_NAME = "ReadingSubmissions";
 let db = null;
@@ -27,46 +33,99 @@ export function getSubmission(id) {
 }
 
 export function saveSubmission(data) {
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction([STORE_NAME], "readwrite");
-    const store = tx.objectStore(STORE_NAME);
-    const req = store.put(data);
-    req.onsuccess = () => {
-      try {
-        const now = new Date();
-        const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} - ${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`;
-        const sName = localStorage.getItem('ielts_student_name') || 'Học viên';
-        const sEmail = localStorage.getItem('ielts_student_email') || '';
+  return new Promise(async (resolve, reject) => {
+    try {
+      // 1. LẤY BẢN GHI CŨ ĐỂ KHÔNG BỊ GHI ĐÈ
+      const existing = await getSubmission(data.id);
+      let attempts = (existing && Array.isArray(existing.attempts)) ? existing.attempts : [];
 
-        const attemptSnapshot = {
-          id: "attempt_pr_" + Date.now(),
-          timestamp: timeStr,
-          testTitle: `Pre-Reading: ${data.title || data.id}`,
-          studentName: sName,
-          studentEmail: sEmail,
-          score: `${data.correct || 0}/${data.total || 0}`,
-          timeSpent: "N/A",
-          details: `Đã nộp bài mức độ ${data.level || ''}. Điểm đạt: ${data.correct || 0}/${data.total || 0}`,
-          pageUrl: "pre-reading/index-pr.html"
-        };
+      // Nếu trước đó đã nộp 1 lần theo dạng cũ
+      if (existing && attempts.length === 0 && existing.timestamp) {
+        attempts.push({
+          attemptNum: 1,
+          correct: existing.correct,
+          total: existing.total,
+          wrongNotes: existing.wrongNotes || 'Không có',
+          wrongProofs: existing.wrongProofs || [],
+          fullProof: existing.fullProof || null,
+          timestamp: existing.timestamp
+        });
+      }
 
-        // 1. Lưu LocalStorage
-        const localHist = JSON.parse(localStorage.getItem('ielts_local_history') || '[]');
-        localHist.unshift(attemptSnapshot);
-        localStorage.setItem('ielts_local_history', JSON.stringify(localHist));
+      // 2. TẠO LẦN LÀM MỚI (LẦN 2, LẦN 3...)
+      const newAttemptNum = attempts.length + 1;
+      const currentAttempt = {
+        attemptNum: newAttemptNum,
+        correct: data.correct,
+        total: data.total,
+        wrongNotes: data.wrongNotes || 'Không có',
+        wrongProofs: data.wrongProofs || [],
+        fullProof: data.fullProof || null,
+        timestamp: data.timestamp || new Date().toLocaleString("vi-VN")
+      };
 
-        // 2. Bắn lên Google Drive
-        fetch("https://script.google.com/macros/s/AKfycbyNErQQFdciAQM0k9KUrACtpX7rxKkopjChYAC2Ubwj5MGzFOeekDEGs8C1n7P9cNR6vg/exec", {
-          method: "POST",
-          mode: "no-cors",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify({ action: "save_attempt", attempt: attemptSnapshot })
-        }).catch(() => {});
-      } catch (err) {}
+      attempts.push(currentAttempt);
 
-      resolve();
-    };
-    req.onerror = (e) => reject(e);
+      // 3. ĐÓNG GÓI BẢN GHI TỔNG HỢP (LƯU TOÀN BỘ CÁC LẦN VÀO MẢNG)
+      const recordToSave = {
+        id: data.id,
+        skill: data.skill || "reading",
+        level: data.level || "A1",
+        title: data.title || existing?.title || data.id,
+        // Giữ thuộc tính ở tầng ngoài để tương thích ngược
+        correct: data.correct,
+        total: data.total,
+        wrongNotes: data.wrongNotes,
+        wrongProofs: data.wrongProofs,
+        fullProof: data.fullProof,
+        timestamp: data.timestamp,
+        attempts: attempts
+      };
+
+      const tx = db.transaction([STORE_NAME], "readwrite");
+      const store = tx.objectStore(STORE_NAME);
+      const req = store.put(recordToSave);
+
+      req.onsuccess = () => {
+        try {
+          const now = new Date();
+          const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} - ${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`;
+          const sName = localStorage.getItem('ielts_student_name') || 'Học viên';
+          const sEmail = localStorage.getItem('ielts_student_email') || '';
+
+          const attemptSnapshot = {
+            id: `attempt_pr_${Date.now()}`,
+            timestamp: `${timeStr} (Lần ${newAttemptNum})`,
+            testTitle: `Pre-Reading: ${data.title || data.id} (Lần ${newAttemptNum})`,
+            studentName: sName,
+            studentEmail: sEmail,
+            score: `${data.correct || 0}/${data.total || 0}`,
+            timeSpent: "N/A",
+            details: `Đã nộp bài mức độ ${data.level || ''} [LẦN ${newAttemptNum}]. Điểm đạt: ${data.correct || 0}/${data.total || 0}`,
+            pageUrl: "pre-reading/index-pr.html",
+            moduleType: "pre_reading"
+          };
+
+          // Lưu LocalStorage chung
+          const localHist = JSON.parse(localStorage.getItem('ielts_local_history') || '[]');
+          localHist.unshift(attemptSnapshot);
+          localStorage.setItem('ielts_local_history', JSON.stringify(localHist));
+
+          // Gửi lên Google Drive
+          fetch("https://script.google.com/macros/s/AKfycbyNErQQFdciAQM0k9KUrACtpX7rxKkopjChYAC2Ubwj5MGzFOeekDEGs8C1n7P9cNR6vg/exec", {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify({ action: "save_attempt", attempt: attemptSnapshot })
+          }).catch(() => {});
+        } catch (err) {}
+
+        resolve(recordToSave);
+      };
+      req.onerror = (e) => reject(e);
+    } catch (err) {
+      reject(err);
+    }
   });
 }
 
