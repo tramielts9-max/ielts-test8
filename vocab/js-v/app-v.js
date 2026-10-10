@@ -1,3 +1,9 @@
+/**
+ * vocab/js-v/app-v.js
+ * BỘ ĐIỀU KHIỂN TỔNG THỂ SMART VOCAB DUOLINGO X TRẠM IELTS
+ * BẢN FULL ĐẦY ĐỦ 100% - TÍCH HỢP 4 CHẾ ĐỘ KHẢO TỪ VỰNG & LƯU LỊCH SỬ CHUNG
+ */
+
 import { StorageManager } from './storage-v.js';
 import { SRSEngine } from './srs-engine-v.js';
 import { BotsSimulation } from './bots-simulation-v.js';
@@ -22,10 +28,7 @@ class App {
       const resCourses = await fetch('data-v/courses-v.json');
       this.courses = await resCourses.json();
       
-      // Khởi tạo khóa học đang chọn
       this.currentCourse = this.courses.find(c => c.id === this.currentCourseId) || this.courses[0];
-      
-      // Nạp toàn bộ từ của khóa học hiện tại
       await this.loadAllWordsForCurrentCourse();
     } catch (e) {
       alert("Không thể tải danh sách khóa học!");
@@ -37,24 +40,17 @@ class App {
       StorageManager.saveLeaderboard(this.leaderboard);
     }
 
-    // 1. Cài đặt thanh Dropdown chọn bộ từ (300 từ <-> 540 từ)
     this.initCourseSelector();
-
-    // 2. Cài đặt các Tab chuyển đổi
     this.initNavigationTabs();
-
-    // 3. Hiển thị thông số học viên & Streak
     this.updateUserStatsUI();
     this.renderWeeklyStreak();
     this.refreshDashboard();
 
-    // Nút bắt đầu ôn tập
     document.getElementById('btnStartReview').onclick = () => {
-      this.currentSessionTitle = `${this.currentCourse.title} (Tổng hợp)`;
-      this.startReviewSession(this.currentWordsPool);
+      this.currentSessionTitle = `${this.currentCourse.title} (Tổng hợp Flashcard)`;
+      this.startReviewSession(this.currentWordsPool, { type: 'flashcard' });
     };
 
-    // Mô phỏng xếp hạng Bot
     setInterval(() => {
       this.leaderboard = BotsSimulation.simulateBotProgress(this.leaderboard, this.user.xp);
       StorageManager.saveLeaderboard(this.leaderboard);
@@ -62,9 +58,6 @@ class App {
     }, 15000);
   }
 
-  /**
-   * BỘ ĐIỀU KHIỂN CHỌN KHÓA HỌC (300 TỪ <-> 540 TỪ)
-   */
   initCourseSelector() {
     const courseDropdown = document.getElementById('courseSelectorDropdown');
     if (!courseDropdown) return;
@@ -77,7 +70,6 @@ class App {
       this.currentCourseId = this.currentCourse.id;
       localStorage.setItem('sv_active_course_id', this.currentCourseId);
 
-      // Cập nhật giao diện khi đổi khóa
       await this.loadAllWordsForCurrentCourse();
       this.renderRoadmap();
       this.refreshDashboard();
@@ -114,6 +106,9 @@ class App {
     });
   }
 
+  // =========================================================================
+  // TAB 2: LỘ TRÌNH ROADMAP (THÊM NÚT "KHẢO TỪ VỰNG" TỪNG BÀI)
+  // =========================================================================
   renderRoadmap() {
     const container = document.getElementById('roadmapLessonList');
     const headerTitle = document.getElementById('courseHeaderTitle');
@@ -126,38 +121,97 @@ class App {
     container.innerHTML = this.currentCourse.lessons.map((lesson, idx) => {
       const isStart = idx === 0;
       return `
-        <div class="lesson-card ${isStart ? 'active-start' : ''}" onclick="window.startUnitLesson('${lesson.file}', '${lesson.title}')">
-          ${isStart ? '<div class="badge-start-here">START HERE</div>' : ''}
+        <div class="lesson-card ${isStart ? 'active-start' : ''}">
+          ${isStart ? '<div class="badge-start-here">BẮT ĐẦU TẠI ĐÂY</div>' : ''}
           <div class="lesson-avatar">${lesson.icon}</div>
           <div class="lesson-info">
             <div class="lesson-title">${lesson.title}</div>
             <div class="lesson-subtitle">${lesson.subTitle}</div>
+            <div style="display:flex; gap:8px; margin-top:10px;">
+              <button type="button" class="btn" style="background:#0284C7; color:white; padding:7px 14px; font-size:12.5px; border-radius:10px; border-bottom:3px solid #0369A1;" onclick="window.startUnitLesson('${lesson.file}', '${lesson.title}', 'flashcard')">
+                🧠 Học Flashcard
+              </button>
+              <button type="button" class="btn" style="background:#8B1518; color:white; padding:7px 14px; font-size:12.5px; border-radius:10px; border-bottom:3px solid #5E0C0E;" onclick="window.openKhaoVocabModal('${lesson.file}', '${lesson.title}')">
+                ✍️ Khảo Từ Vựng
+              </button>
+            </div>
           </div>
           <div class="lesson-badge-count">${lesson.count} từ</div>
         </div>
       `;
     }).join('');
 
-    window.startUnitLesson = async (fileName, title) => {
+    window.startUnitLesson = async (fileName, title, modeType = 'flashcard', customConfig = null) => {
       try {
         const res = await fetch(`data-v/${fileName}`);
         const unitWords = await res.json();
         this.currentSessionTitle = `Từ vựng: ${title}`;
-        this.startReviewSession(unitWords);
+        const config = customConfig || { type: modeType };
+        this.startReviewSession(unitWords, config);
       } catch (e) {
         alert("Không thể tải bài học: " + fileName);
       }
     };
+
+    // MỞ POPUP CHỌN 4 CHẾ ĐỘ KHẢO TỪ VỰNG
+    window.openKhaoVocabModal = (fileName, title) => {
+      let modal = document.getElementById('khaoModeSelectorModal');
+      if (modal) modal.remove();
+
+      modal = document.createElement('div');
+      modal.id = 'khaoModeSelectorModal';
+      modal.className = 'modal-overlay';
+      modal.innerHTML = `
+        <div class="modal-card" style="max-width:540px;">
+          <div class="modal-header">
+            <h3>📝 KHẢO TỪ VỰNG: ${title}</h3>
+            <button class="btn-close-modal" onclick="document.getElementById('khaoModeSelectorModal').remove()">&times;</button>
+          </div>
+          <div class="modal-body" style="padding:22px;">
+            <p style="font-size:14px; color:var(--text-muted); font-weight:700; margin-bottom:16px;">
+              Chọn 1 trong 4 hình thức khảo bài để kiểm tra độ thuộc lòng từ vựng của em:
+            </p>
+            <div class="khao-options-grid">
+              <div class="btn-khao-mode-card" onclick="window.startKhaoMode('${fileName}', '${title}', 'vn_to_en', false)">
+                <b style="color:var(--tram-red); font-size:15px; display:block;">1. Việt ➔ Anh</b>
+                <span style="font-size:12.5px; color:var(--text-muted); font-weight:700;">Giữ nguyên thứ tự đề</span>
+              </div>
+              <div class="btn-khao-mode-card" onclick="window.startKhaoMode('${fileName}', '${title}', 'vn_to_en', true)">
+                <b style="color:#0284C7; font-size:15px; display:block;">2. Việt ➔ Anh</b>
+                <span style="font-size:12.5px; color:var(--text-muted); font-weight:700;">Xáo trộn ngẫu nhiên 🔀</span>
+              </div>
+              <div class="btn-khao-mode-card" onclick="window.startKhaoMode('${fileName}', '${title}', 'en_to_vn', false)">
+                <b style="color:#16A34A; font-size:15px; display:block;">3. Anh ➔ Việt</b>
+                <span style="font-size:12.5px; color:var(--text-muted); font-weight:700;">Giữ nguyên thứ tự đề</span>
+              </div>
+              <div class="btn-khao-mode-card" onclick="window.startKhaoMode('${fileName}', '${title}', 'en_to_vn', true)">
+                <b style="color:#D97706; font-size:15px; display:block;">4. Anh ➔ Việt</b>
+                <span style="font-size:12.5px; color:var(--text-muted); font-weight:700;">Xáo trộn ngẫu nhiên 🔀</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(modal);
+    };
+
+    window.startKhaoMode = (fileName, title, direction, shuffle) => {
+      document.getElementById('khaoModeSelectorModal')?.remove();
+      const config = {
+        type: 'test',
+        direction: direction,
+        shuffle: shuffle
+      };
+      const label = `${title} (${direction === 'vn_to_en' ? 'Việt->Anh' : 'Anh->Việt'} - ${shuffle ? 'Xáo trộn' : 'Thứ tự'})`;
+      window.startUnitLesson(fileName, label, 'test', config);
+    };
   }
 
-  /**
-   * SỔ TAY TỪ VỰNG: TÍNH CHÍNH XÁC TỪ ĐÃ THUỘC (LEVEL >= 2) VÀ CHƯA THUỘC
-   */
   renderSotay() {
     const totalWords = this.currentWordsPool.length;
     let learnedCount = 0;
 
-    // CHỈ TÍNH LÀ ĐÃ HỌC NẾU LEVEL >= 2 (ĐÃ BẤM NHỚ VÀ VƯỢT QUA TẦNG 1)
     this.currentWordsPool.forEach(w => {
       const prog = this.progress[w.id];
       if (prog && prog.level >= 2) {
@@ -182,7 +236,6 @@ class App {
     this.currentSearchTerm = '';
     this.renderWordStatusList();
 
-    // Cập nhật số lượng các tầng tháp trí nhớ
     for (let i = 1; i <= 5; i++) {
       const countTier = this.currentWordsPool.filter(w => (this.progress[w.id]?.level || 1) === i).length;
       const el = document.getElementById(`towerT${i}_st`);
@@ -254,7 +307,7 @@ class App {
       return `
         <div class="word-status-row">
           <div>
-            <div style="font-weight: 800; font-size: 15.5px; color: var(--primary);">
+            <div style="font-weight: 800; font-size: 15.5px; color: var(--tram-red);">
               ${w.word}
             </div>
             <div style="font-size: 13.5px; color: var(--text-main); margin-top: 2px;">
@@ -311,20 +364,21 @@ class App {
     UIController.startGoldenTimer(nextTime, queueData.isGoldenTime);
   }
 
-  startReviewSession(wordsPool) {
+  startReviewSession(wordsPool, modeConfig = { type: 'flashcard' }) {
     const queueData = SRSEngine.getReviewQueue(wordsPool, this.progress);
     const quiz = new QuizController(
       queueData.words,
       queueData.isGoldenTime,
-      (results, isGoldenTime, totalSecs) => this.onFinishSession(results, isGoldenTime, totalSecs)
+      (results, isGoldenTime, totalSecs, sessionType, customConfig) => this.onFinishSession(results, isGoldenTime, totalSecs, sessionType, customConfig),
+      modeConfig
     );
     quiz.start();
   }
 
-  /**
-   * KẾT THÚC PHIÊN HỌC: LƯU VÀO TRANG CHỦ & ĐỒNG BỘ BẢNG ADMIN
-   */
-  onFinishSession(sessionResults, isGoldenTime, totalSecs) {
+  // =========================================================================
+  // KẾT THÚC PHIÊN HỌC HOẶC KHẢO TỪ: LƯU VÀO LỊCH SỬ CHUNG TRANG CHỦ
+  // =========================================================================
+  onFinishSession(sessionResults, isGoldenTime, totalSecs, sessionType = 'flashcard', customConfig = null) {
     let correctCount = 0;
     const detailsList = [];
 
@@ -333,21 +387,18 @@ class App {
       const currentProg = this.progress[res.wordId];
       const nextLvl = SRSEngine.calculateNextReview(currentProg, res.isCorrect);
       
-      // Lưu vết lịch sử theo email
       this.progress = StorageManager.recordWordReview(this.user.email, res.wordId, res.isCorrect, nextLvl);
       
-      // Tạo chuỗi chi tiết cho Admin xem từng từ
-      detailsList.push(`• ${res.word}: ${res.meaning} -> [${res.isCorrect ? 'ĐÃ NHỚ (✓)' : 'CHƯA NHỚ (✕)'}] (${res.thinkTimeSec}s)`);
+      const userChoiceStr = res.userAnswer ? `[Học sinh gõ: "${res.userAnswer}"]` : `[${res.userChoice || ''}]`;
+      detailsList.push(`• ${res.word}: ${res.meaning} -> ${userChoiceStr} -> [${res.isCorrect ? 'ĐÚNG (✓)' : 'CHƯA ĐÚNG (✕)'}] (${res.thinkTimeSec}s)`);
     });
 
-    // Cộng điểm kinh nghiệm XP
-    const earnedXP = correctCount * (isGoldenTime ? 15 : 10);
+    const earnedXP = correctCount * (sessionType === 'test' ? 20 : (isGoldenTime ? 15 : 10));
     this.user.xp += earnedXP;
     StorageManager.saveUser(this.user);
     StorageManager.recordTodayCheckin(this.user.email);
     this.renderWeeklyStreak();
 
-    // Định dạng thời gian làm bài
     const mm = String(Math.floor(totalSecs / 60)).padStart(2, '0');
     const ss = String(totalSecs % 60).padStart(2, '0');
     const speedStr = `${mm}:${ss}`;
@@ -355,20 +406,24 @@ class App {
     const now = new Date();
     const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} - ${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`;
 
-    // TẠO BẢN GHI ĐỒNG BỘ CHUẨN VỚI HỆ THỐNG READING/LISTENING
+    const sessionTitle = sessionType === 'test' 
+      ? `Khảo từ vựng: ${this.currentSessionTitle}` 
+      : this.currentSessionTitle;
+
+    // BẢN GHI ĐỒNG BỘ CHUẨN LÊN TRANG CHỦ INDEX.HTML
     const attemptSnapshot = {
       id: "attempt_vocab_" + Date.now(),
       timestamp: timeStr,
-      testTitle: this.currentSessionTitle,
+      testTitle: sessionTitle,
       studentName: this.user.name,
       studentEmail: this.user.email,
       score: `${correctCount}/${sessionResults.length}`,
       timeSpent: speedStr,
       details: detailsList.join('\n'),
-      pageUrl: "vocab/index-v.html"
+      pageUrl: "vocab/index-v.html",
+      moduleType: "vocab"
     };
 
-    // 1. Lưu ngay vào bộ nhớ máy để Trang chủ index.html hiện bài lập tức
     try {
       const localHist = JSON.parse(localStorage.getItem('ielts_local_history') || '[]');
       localHist.unshift(attemptSnapshot);
@@ -377,7 +432,6 @@ class App {
       console.warn("Không thể lưu cache lịch sử:", e);
     }
 
-    // 2. Gửi dữ liệu lên Google Drive để lưu vào Dashboard của Admin
     if (StorageManager.GOOGLE_SCRIPT_URL) {
       fetch(StorageManager.GOOGLE_SCRIPT_URL, {
         method: "POST",
@@ -391,13 +445,18 @@ class App {
     document.getElementById('quizContainer').classList.add('hidden');
     document.getElementById('dashboardView').classList.remove('hidden');
 
-    this.showResultPopup(correctCount, sessionResults.length, earnedXP, speedStr);
+    this.showResultPopup(correctCount, sessionResults.length, earnedXP, speedStr, sessionType);
     this.refreshDashboard();
   }
 
-  showResultPopup(correct, total, xp, speedStr) {
+  showResultPopup(correct, total, xp, speedStr, sessionType = 'flashcard') {
     let existing = document.getElementById('sessionResultModal');
     if (existing) existing.remove();
+
+    const titleText = sessionType === 'test' ? 'Đã hoàn thành bài Khảo Từ Vựng!' : 'Tuyệt vời!';
+    const subText = sessionType === 'test' 
+      ? `Điểm của em: ${correct}/${total} từ (${Math.round((correct/total)*100)}%). Bài thi đã được lưu vào Lịch sử Trang chủ.`
+      : 'Bạn vừa hoàn thành một phiên luyện từ vựng xuất sắc';
 
     const modal = document.createElement('div');
     modal.id = 'sessionResultModal';
@@ -405,13 +464,13 @@ class App {
     modal.innerHTML = `
       <div class="result-modal-card">
         <div class="result-celebrate-icon">🎉</div>
-        <h2>Tuyệt vời!</h2>
-        <div class="result-subtitle">Bạn vừa hoàn thành một phiên luyện từ vựng xuất sắc</div>
+        <h2>${titleText}</h2>
+        <div class="result-subtitle">${subText}</div>
 
         <div class="result-stats-grid">
           <div class="result-stat-box">
             <div class="stat-val">${correct}/${total}</div>
-            <div class="stat-lbl">ĐÃ THUỘC</div>
+            <div class="stat-lbl">${sessionType === 'test' ? 'ĐÚNG' : 'ĐÃ THUỘC'}</div>
           </div>
           <div class="result-stat-box">
             <div class="stat-val" style="color: #f59e0b;">+${xp}</div>
