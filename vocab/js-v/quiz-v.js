@@ -1,15 +1,15 @@
 /**
  * vocab/js-v/quiz-v.js
  * BỘ ĐIỀU KHIỂN FLASHCARD & PHÒNG THI KHẢO TỪ VỰNG 4 CHẾ ĐỘ (CÓ AI CHẤM ĐỒNG NGHĨA)
- * BẢN FULL ĐẦY ĐỦ 100% - KHÔNG CẮT BỚT BẤT KỲ DÒNG NÀO
+ * BẢN FULL ĐẦY ĐỦ 100% - ĐÃ CẬP NHẬT KEY MỚI TỪ PHÂN HỆ GRAMMAR
  */
 
-// 1. MÃ HÓA RUNTIME AUTH KEY ĐỂ GỌI AI GEMINI CHẤM ĐỒNG NGHĨA
+// 1. MÃ HÓA RUNTIME AUTH KEY MỚI (TỪ GRAMMAR KEY CỦA BẠN)
 const _AUTH_SEEDS = [
-  65, 81, 46, 65, 98, 56, 82, 78, 54, 75, 116, 80, 107, 51, 45, 50,
-  75, 103, 117, 114, 119, 117, 116, 65, 115, 55, 95, 118, 82, 66,
-  121, 81, 110, 113, 67, 48, 77, 86, 55, 52, 66, 119, 107, 82, 107,
-  80, 110, 74, 89, 70, 90, 49, 119
+  65, 81, 46, 65, 98, 56, 82, 78, 54, 75, 52, 95, 111, 68, 102, 97,
+  106, 111, 54, 107, 54, 106, 48, 118, 110, 83, 82, 87, 95, 87, 110,
+  122, 48, 65, 103, 117, 103, 72, 82, 48, 45, 97, 115, 45, 84, 95,
+  109, 86, 121, 116, 101, 83, 81
 ];
 
 function getDecodedKey() {
@@ -183,7 +183,7 @@ export class QuizController {
   }
 
   // =========================================================================
-  // 2. PHẦN KHẢO TỪ VỰNG (4 CHẾ ĐỘ KIỂM TRA + AI CHẤM ĐỒNG NGHĨA)
+  // 2. PHẦN KHẢO TỪ VỰNG (4 CHẾ ĐỘ KIỂM TRA + AI CHẤM ĐỒNG NGHĨA VỚI KEY MỚI)
   // =========================================================================
   renderCurrentTestQuestion() {
     if (this.currentIndex >= this.preparedWords.length) {
@@ -326,8 +326,8 @@ export class QuizController {
     }
   }
 
-  // GỌI AI KIỂM TRA NGHĨA ĐỒNG NGHĨA
-  async function verifyWithAI(word, meaning, userAns, lang) {
+  // GỌI AI KIỂM TRA NGHĨA ĐỒNG NGHĨA VỚI KEY MỚI
+  async verifyWithAI(word, meaning, userAns, lang) {
     const apiKey = getDecodedKey();
     const prompt = `
 Bạn là Giám khảo chấm thi từ vựng tiếng Anh.
