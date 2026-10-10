@@ -1,7 +1,7 @@
 /**
  * writing task 1/js/app-t1.js
  * BỘ ĐIỀU KHIỂN TASK 1 THEO PHONG CÁCH DUOLINGO X TRẠM IELTS
- * ĐÃ BỎ 100% CÁC BIỂU TƯỢNG GÂY LỖI Ô VUÔNG
+ * BẢN FULL ĐẦY ĐỦ 100% - LƯU TỪNG LẦN LÀM, XUẤT PDF & TRỢ GIẢNG AI STACKING Q&A
  */
 
 import { streamGeminiTask1 } from './api-t1.js';
@@ -10,6 +10,7 @@ let manifestData = [];
 let currentItemJson = null;
 let currentBase64Image = null;
 let currentCategory = "ALL";
+let activeExerciseKey = null;
 
 let guideTimerInterval = null;
 let guideTotalOpenSeconds = 0;
@@ -24,6 +25,32 @@ document.addEventListener('DOMContentLoaded', () => {
   setupWorkspaceListeners();
   loadManifestAndInitPortal();
 });
+
+// =========================================================================
+// QUẢN LÝ LƯU TRỮ TỪNG LẦN LÀM (ATTEMPTS: LẦN 1, LẦN 2...)
+// =========================================================================
+function getWT1StorageKey(key) {
+  return `ielts_wt1_attempts_${key}`;
+}
+
+function getWT1Attempts(key) {
+  try {
+    const raw = localStorage.getItem(getWT1StorageKey(key));
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveWT1Attempt(key, attemptData) {
+  try {
+    const attempts = getWT1Attempts(key);
+    attempts.unshift(attemptData); // Lần mới nhất lên đầu
+    localStorage.setItem(getWT1StorageKey(key), JSON.stringify(attempts));
+  } catch (e) {
+    console.warn("Lỗi lưu lần làm WT1:", e);
+  }
+}
 
 function getCompletedRecord(title) {
   try {
@@ -72,9 +99,14 @@ function renderCards() {
 
   let completedCount = 0;
   manifestData.forEach(item => {
-    if (getCompletedRecord(item.title)) completedCount++;
+    const attempts = getWT1Attempts(item.id || item.title);
+    if (attempts.length > 0 || getCompletedRecord(item.title)) completedCount++;
   });
-  document.getElementById('portalProgressBadge').innerText = `${completedCount}/${manifestData.length} Đã viết`;
+  
+  const progBadge = document.getElementById('portalProgressBadge');
+  if (progBadge) {
+    progBadge.innerText = `${completedCount}/${manifestData.length} Đã viết`;
+  }
 
   const filtered = manifestData.filter(item => {
     const matchCat = (currentCategory === "ALL") || item.type === currentCategory;
@@ -92,8 +124,12 @@ function renderCards() {
   }
 
   container.innerHTML = filtered.map(item => {
+    const itemKey = item.id || item.title;
+    const attempts = getWT1Attempts(itemKey);
     const rec = getCompletedRecord(item.title);
-    const isDone = !!rec;
+    const isDone = attempts.length > 0 || !!rec;
+    const count = attempts.length > 0 ? attempts.length : (isDone ? 1 : 0);
+    const latestScore = attempts.length > 0 ? attempts[0].score : (rec?.score || 'Đã viết');
 
     return `
       <div class="t1-lesson-card ${isDone ? 'is-done' : ''}">
@@ -103,8 +139,8 @@ function renderCards() {
               ${item.type}
             </span>
             ${isDone 
-              ? `<span style="font-size: 13px; font-weight: 900; color: #166534;">
-                   ✓ ${rec.score || 'Đã viết'}
+              ? `<span style="font-size: 12.5px; font-weight: 900; background: #DCFCE7; color: #166534; padding: 2px 8px; border-radius: 6px; border: 1px solid #86EFAC;">
+                   ✓ Đã viết ${count} lần (${latestScore})
                  </span>` 
               : `<span style="font-size: 12.5px; font-weight: 800; color: var(--text-muted);">
                    ● Chưa làm
@@ -116,9 +152,16 @@ function renderCards() {
           </h4>
         </div>
 
-        <button onclick="window.startLessonTask1('${item.file}', '${item.image || ''}', '${item.type}')" class="btn-3d ${isDone ? 'btn-3d-green' : 'btn-3d-teal'}" style="width: 100%; padding: 11px; font-size: 13.5px;">
-          ${isDone ? 'Xem lại & Viết lại →' : 'Vào phòng thi viết →'}
-        </button>
+        <div style="display: flex; gap: 8px; margin-top: 10px;">
+          <button onclick="window.startLessonTask1('${item.file}', '${item.image || ''}', '${item.type}', '${itemKey}')" class="btn-3d ${isDone ? 'btn-3d-green' : 'btn-3d-teal'}" style="flex: 1; padding: 10px 14px; font-size: 13px;">
+            ${isDone ? `+ Viết tiếp lần ${count + 1}` : 'Vào phòng thi viết →'}
+          </button>
+          ${isDone ? `
+            <button onclick="window.openPastAttemptsTask1('${item.file}', '${item.image || ''}', '${item.type}', '${itemKey}')" class="btn-3d btn-3d-white" style="padding: 10px 12px; font-size: 13px;" title="Xem lại bài viết và nhận xét AI">
+              👁️ Xem (${count})
+            </button>
+          ` : ''}
+        </div>
       </div>
     `;
   }).join('');
@@ -127,7 +170,8 @@ function renderCards() {
 window.filterTask1Cards = () => renderCards();
 
 // ==================== CHUYỂN QUA LẠI WORKSPACE ====================
-window.startLessonTask1 = async (filePath, imageSrc, chartType) => {
+window.startLessonTask1 = async (filePath, imageSrc, chartType, itemKey) => {
+  activeExerciseKey = itemKey || filePath;
   document.getElementById('portalScreen').classList.add('hidden');
   document.getElementById('workspaceScreen').classList.remove('hidden');
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -147,6 +191,8 @@ window.startLessonTask1 = async (filePath, imageSrc, chartType) => {
     }
     renderGuideContent(currentItemJson.guide);
     resetGuideTimer();
+    renderWorkspacePastAttemptsBar();
+    resetQAChatBox();
   } catch (err) {
     console.warn("Lỗi tải chi tiết:", err.message);
     if (imageSrc) {
@@ -157,6 +203,13 @@ window.startLessonTask1 = async (filePath, imageSrc, chartType) => {
     }
     renderGuideContent(null);
   }
+};
+
+window.openPastAttemptsTask1 = async (filePath, imageSrc, chartType, itemKey) => {
+  await window.startLessonTask1(filePath, imageSrc, chartType, itemKey);
+  setTimeout(() => {
+    window.viewPastAttemptDetailWT1(0);
+  }, 400);
 };
 
 window.backToPortalTask1 = () => {
@@ -191,6 +244,68 @@ function setupWorkspaceListeners() {
 
   document.getElementById('btnSubmitGrading')?.addEventListener('click', submitEssay);
 }
+
+// =========================================================================
+// THANH HIỂN THỊ CÁC LẦN NỘP BÀI CŨ
+// =========================================================================
+function renderWorkspacePastAttemptsBar() {
+  let bar = document.getElementById('wt1PastAttemptsBar');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'wt1PastAttemptsBar';
+    const workspace = document.querySelector('.workspace-t1');
+    if (workspace) workspace.parentNode.insertBefore(bar, workspace);
+  }
+
+  const attempts = getWT1Attempts(activeExerciseKey);
+  if (attempts.length === 0) {
+    bar.innerHTML = '';
+    return;
+  }
+
+  let html = `
+    <div style="background: #F0FDF4; border: 2px solid #86EFAC; border-radius: 16px; padding: 12px 18px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+      <div>
+        <b style="color: #166534; font-size: 14px;">📜 Đề này Em đã viết ${attempts.length} lần trước đây:</b>
+        <div style="display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap;">
+  `;
+
+  attempts.forEach((att, idx) => {
+    html += `
+      <button type="button" onclick="window.viewPastAttemptDetailWT1(${idx})" style="background: #FFFFFF; border: 1.5px solid #86EFAC; border-bottom: 3px solid #22C55E; padding: 4px 10px; border-radius: 8px; font-weight: 800; font-size: 12.5px; cursor: pointer; color: #166534;">
+        Lần ${att.attemptNum || (attempts.length - idx)}: <b>${att.score}</b> (${att.timestamp.split(' - ')[0]})
+      </button>
+    `;
+  });
+
+  html += `
+        </div>
+      </div>
+      <span style="font-size: 12px; color: #15803D; font-weight: 700;">Nhấp vào lần làm để xem lại bản chấm cũ</span>
+    </div>
+  `;
+
+  bar.innerHTML = html;
+}
+
+window.viewPastAttemptDetailWT1 = (idx) => {
+  const attempts = getWT1Attempts(activeExerciseKey);
+  const att = attempts[idx];
+  if (!att) return;
+
+  document.getElementById('studentEssayInput').value = att.studentEssay || '';
+  const text = att.studentEssay || '';
+  document.getElementById('wordCounter').innerText = `${text.trim() ? text.trim().split(/\s+/).length : 0} từ`;
+
+  const resultBox = document.getElementById('resultBox');
+  const resultMarkdown = document.getElementById('resultMarkdown');
+  const statusBar = document.getElementById('statusBar');
+
+  resultBox.style.display = 'block';
+  statusBar.innerHTML = `📜 ĐANG XEM LẠI BÀI CHẤM: <b>LẦN ${att.attemptNum || 1}</b> (${att.timestamp}) — Điểm: <b>${att.score}</b>`;
+  resultMarkdown.innerHTML = marked.parse(att.aiFeedback || '');
+  resultBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
 
 function renderGuideContent(guideMarkdown) {
   const box = document.getElementById('guideContentBox');
@@ -385,41 +500,54 @@ ${essay}
     statusBar.innerHTML = `✅ Thầy đã chấm xong! (Trạng thái: <b>${modeStatus}</b>)`;
     submitBtn.disabled = false;
 
-    // --- LƯU VÀO LOCAL VÀ BẮN LÊN GOOGLE DRIVE ---
-    try {
-      const now = new Date();
-      const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} - ${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`;
-      const sName = localStorage.getItem('ielts_student_name') || 'Học viên';
-      const sEmail = localStorage.getItem('ielts_student_email') || '';
-      
-      const bandMatch = fullOutput.match(/OVERALL BAND SCORE:\s*([0-9.]+)/i) || fullOutput.match(/Band\s*([0-9.]+)/i);
-      const bandScore = bandMatch ? `Band ${bandMatch[1]}` : "Đã hoàn thành";
+    // --- LƯU VÀO ATTEMPTS RIÊNG BIỆT ---
+    const now = new Date();
+    const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} - ${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`;
+    const sName = localStorage.getItem('ielts_student_name') || 'Học viên';
+    const sEmail = localStorage.getItem('ielts_student_email') || '';
 
-      const attemptSnapshot = {
-        id: "attempt_wt1_" + Date.now(),
-        timestamp: timeStr,
-        testTitle: `Writing Task 1: ${currentItemJson?.title || 'Biểu đồ Task 1'}`,
-        studentName: sName,
-        studentEmail: sEmail,
-        score: bandScore,
-        timeSpent: `${guideTotalOpenSeconds}s`,
-        details: `ĐỀ BÀI:\n${prompt}\n\nBÀI LÀM HỌC VIÊN:\n${essay}\n\nBÀI CHẤM AI:\n${fullOutput}`,
-        pageUrl: "writing task 1/index-t1.html"
-      };
+    const bandMatch = fullOutput.match(/OVERALL BAND SCORE:\s*([0-9.]+)/i) || fullOutput.match(/Band\s*([0-9.]+)/i);
+    const bandScore = bandMatch ? `Band ${bandMatch[1]}` : "Đã hoàn thành";
 
-      const localHist = JSON.parse(localStorage.getItem('ielts_local_history') || '[]');
-      localHist.unshift(attemptSnapshot);
-      localStorage.setItem('ielts_local_history', JSON.stringify(localHist));
+    const attempts = getWT1Attempts(activeExerciseKey);
+    const newAttemptNum = attempts.length + 1;
 
-      fetch(CLOUD_SCRIPT_URL, {
-        method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({ action: "save_attempt", attempt: attemptSnapshot })
-      }).catch(() => {});
-    } catch(errHist) {
-      console.warn("Lỗi lưu Writing Task 1:", errHist);
-    }
+    const newAttemptRecord = {
+      attemptNum: newAttemptNum,
+      timestamp: timeStr,
+      score: bandScore,
+      timeSpent: `${guideTotalOpenSeconds}s`,
+      studentEssay: essay,
+      aiFeedback: fullOutput
+    };
+
+    saveWT1Attempt(activeExerciseKey, newAttemptRecord);
+    renderWorkspacePastAttemptsBar();
+
+    // --- LƯU VÀO LỊCH SỬ CHUNG TRANG CHỦ & BẮN LÊN GOOGLE DRIVE ---
+    const attemptSnapshot = {
+      id: "attempt_wt1_" + Date.now(),
+      timestamp: `${timeStr} (Lần ${newAttemptNum})`,
+      testTitle: `Writing Task 1: ${currentItemJson?.title || 'Biểu đồ Task 1'} (Lần ${newAttemptNum})`,
+      studentName: sName,
+      studentEmail: sEmail,
+      score: bandScore,
+      timeSpent: `${guideTotalOpenSeconds}s`,
+      details: `ĐỀ BÀI:\n${prompt}\n\nBÀI LÀM HỌC VIÊN:\n${essay}\n\nBÀI CHẤM AI:\n${fullOutput}`,
+      pageUrl: "writing task 1/index-t1.html",
+      moduleType: "writing_t1"
+    };
+
+    const localHist = JSON.parse(localStorage.getItem('ielts_local_history') || '[]');
+    localHist.unshift(attemptSnapshot);
+    localStorage.setItem('ielts_local_history', JSON.stringify(localHist));
+
+    fetch(CLOUD_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "save_attempt", attempt: attemptSnapshot })
+    }).catch(() => {});
 
   } catch (err) {
     console.error(err);
@@ -427,3 +555,53 @@ ${essay}
     submitBtn.disabled = false;
   }
 }
+
+// =========================================================================
+// TRỢ GIẢNG AI STACKING Q&A (HỎI DÀN Ý, HẠ ĐỘ KHÓ TỪ VỰNG THEO YÊU CẦU)
+// =========================================================================
+function resetQAChatBox() {
+  const container = document.getElementById('qaChatContainer');
+  if (container) container.innerHTML = '';
+}
+
+window.askTask1Assistant = async () => {
+  const inputEl = document.getElementById('qaInputText');
+  const chatContainer = document.getElementById('qaChatContainer');
+  const question = inputEl?.value.trim();
+  if (!question || !currentItemJson) return;
+
+  inputEl.value = '';
+
+  const qBubble = document.createElement('div');
+  qBubble.style.cssText = 'background:#CCFBF1; border:1.5px solid #99F6E4; border-radius:12px; padding:10px 14px; margin-bottom:10px; font-weight:800; font-size:13.5px; color:#0F766E;';
+  qBubble.innerHTML = `🙋 <b>Em hỏi:</b> ${question}`;
+  chatContainer.appendChild(qBubble);
+
+  const aBubble = document.createElement('div');
+  aBubble.style.cssText = 'background:#FFFFFF; border:1.5px solid #E8E2D8; border-left:4px solid #0D9488; border-radius:12px; padding:12px 16px; margin-bottom:14px; font-size:14px; line-height:1.6; color:#261F1D;';
+  aBubble.innerHTML = `<i>⏳ Trợ giảng AI đang đọc biểu đồ và chuẩn bị trả lời...</i>`;
+  chatContainer.appendChild(aBubble);
+  chatContainer.scrollTop = chatContainer.scrollHeight;
+
+  const prompt = `
+Bạn là Trợ giảng IELTS Writing Task 1, xưng "Thầy" và gọi học sinh là "Em".
+ĐỀ BÀI TASK 1: ${currentItemJson.prompt}
+HƯỚNG DẪN VIẾT SẴN CÓ: ${currentItemJson.guide || 'Chưa có'}
+CÂU HỎI CỦA HỌC SINH: "${question}"
+
+YÊU CẦU:
+1. Giải thích cụ thể theo số liệu biểu đồ.
+2. Nếu Em yêu cầu hạ độ khó từ vựng hoặc viết câu đơn giản, hãy hướng dẫn cấu trúc câu dễ hiểu (Band 5.5 - 6.0) trước, sau đó mới nâng lên cụm Band 7.5+.
+`;
+
+  let responseText = '';
+  try {
+    await streamGeminiTask1([{ text: prompt }], (chunk) => {
+      responseText += chunk;
+      aBubble.innerHTML = marked.parse(responseText);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    });
+  } catch (err) {
+    aBubble.innerHTML = `⚠️ Lỗi trả lời: ${err.message}. Em thử hỏi lại nhé!`;
+  }
+};
