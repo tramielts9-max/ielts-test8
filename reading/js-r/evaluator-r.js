@@ -1,5 +1,6 @@
 /**
  * reading/js-r/evaluator-r.js - Bộ máy chấm điểm chuyên biệt cho IELTS Reading
+ * (BẢN FULL ĐẦY ĐỦ 100% - HỖ TRỢ MA TRẬN RADIO GRID & MULTI-SELECT CHOOSE TWO)
  */
 import { CONFIG } from '../../js/config.js';
 import { stateManager } from '../../js/state.js';
@@ -50,20 +51,27 @@ export class TestEvaluatorReading {
 
       if (isCorrect) score++;
 
+      // CẬP NHẬT HIỂN THỊ KẾT QUẢ ĐÚNG / SAI
       if (qDiv) {
         const resDiv = qDiv.querySelector('.result') || document.getElementById(`${qKey}_result`);
         const expDiv = qDiv.querySelector('.explanation');
         if (isCorrect) {
-          if (resDiv) resDiv.innerHTML = "<span class='correct-text' style='color:#16a34a; font-weight:700;'>✓ Đúng</span>";
-          qDiv.classList.add('correct-border');
-          qDiv.classList.remove('incorrect-border');
+          if (resDiv) resDiv.innerHTML = "<span style='color:#16a34a; font-weight:800; font-size:13.5px;'>✓ Đúng</span>";
+          qDiv.style.borderColor = '#22C55E';
+          qDiv.style.backgroundColor = '#F0FDF4';
         } else {
           const expStr = Array.isArray(expected) ? expected.join(' / ') : expected;
-          if (resDiv) resDiv.innerHTML = `<span class='incorrect-text' style='color:#dc2626; font-weight:700;'>✗ Sai (Đáp án: <b>${expStr}</b>)</span>`;
-          qDiv.classList.add('incorrect-border');
-          qDiv.classList.remove('correct-border');
+          if (resDiv) resDiv.innerHTML = `<span style='color:#dc2626; font-weight:800; font-size:13.5px;'>✗ Sai (Đáp án đúng: <b>${expStr}</b>)</span>`;
+          qDiv.style.borderColor = '#EF4444';
+          qDiv.style.backgroundColor = '#FFF5F5';
         }
         if (expDiv) expDiv.style.display = 'block';
+      }
+
+      // NẾU LÀ HÀNG TRONG BẢNG MA TRẬN RADIO GRID
+      const matrixRow = document.getElementById(`${qKey}_row`);
+      if (matrixRow) {
+        matrixRow.style.backgroundColor = isCorrect ? '#F0FDF4' : '#FFF5F5';
       }
 
       const badge = document.getElementById(`badge_${qKey}`);
@@ -73,7 +81,7 @@ export class TestEvaluatorReading {
         badge.classList.toggle('status-incorrect', !isCorrect);
       }
 
-      details.push(`${qKey.toUpperCase()}: ${userVal || 'Trống'} (${isCorrect ? 'ĐÚNG' : 'SAI'}) | Nghĩ: ${thoughtEl?.value || 'N/A'}`);
+      details.push(`${qKey.toUpperCase()}: ${userVal || 'Trống'} (${isCorrect ? 'ĐÚNG' : 'SAI'})`);
     }
 
     return { score, total, details: details.join('\n'), snapshot };
@@ -81,8 +89,6 @@ export class TestEvaluatorReading {
 
   async submitToCloud(resultData, studentName, studentEmail, timeSpent) {
     const scoreStr = `${resultData.score}/${resultData.total}`;
-    
-    // Đường dẫn chính xác trong thư mục reading/ để khi ấn xem lại mở đúng file
     const fullPageUrl = 'reading/' + (window.location.pathname.split('/').pop() || 'runner-reading.html') + window.location.search;
 
     const payload = {
@@ -94,24 +100,17 @@ export class TestEvaluatorReading {
       details: resultData.details
     };
 
-    const now = new Date();
-    const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} - ${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`;
-
     const attemptSnapshot = {
       id: "attempt_" + Date.now(),
-      timestamp: timeStr,
+      timestamp: stateManager.getCurrentFormattedTimestamp(),
       ...payload,
       pageUrl: fullPageUrl,
+      moduleType: 'reading',
       ...resultData.snapshot
     };
 
-    try {
-      const localHist = JSON.parse(localStorage.getItem('ielts_local_history') || '[]');
-      localHist.unshift(attemptSnapshot);
-      localStorage.setItem('ielts_local_history', JSON.stringify(localHist));
-    } catch (e) {
-      console.warn("Không thể lưu cache lịch sử tại máy:", e);
-    }
+    // LƯU QUA STATEMANAGER CHUẨN ĐÃ ĐƯỢC NÂNG CẤP
+    stateManager.saveAttempt(attemptSnapshot);
 
     if (CONFIG.AI_AND_SHEET_URL) {
       fetch(CONFIG.AI_AND_SHEET_URL, {
@@ -139,12 +138,12 @@ export class TestEvaluatorReading {
 
     const postBox = document.createElement('div');
     postBox.id = 'btnPostSaveContainer';
-    postBox.style.cssText = "margin-top: 25px; padding: 16px; background: var(--bg-subcard); border: 1.5px solid var(--border-color); border-radius: 8px; text-align: center; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;";
+    postBox.style.cssText = "margin-top: 20px; padding: 14px; background: var(--bg-subcard); border: 2px solid var(--border-color); border-radius: 14px; text-align: center; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;";
     postBox.innerHTML = `
-      <button type="button" id="btnPostSave" style="background: #16a34a; color: white; border: none; padding: 10px 18px; font-weight: 700; font-size: 14px; border-radius: 6px; cursor: pointer;">
+      <button type="button" id="btnPostSave" style="background: #16a34a; color: white; border: none; padding: 10px 18px; font-weight: 800; font-size: 13.5px; border-radius: 10px; cursor: pointer;">
         💾 Lưu vào lịch sử (Bản Sau sửa)
       </button>
-      <button type="button" id="btnResetTest" style="background: #ef4444; color: white; border: none; padding: 10px 18px; font-weight: 700; font-size: 14px; border-radius: 6px; cursor: pointer;">
+      <button type="button" id="btnResetTest" style="background: #ef4444; color: white; border: none; padding: 10px 18px; font-weight: 800; font-size: 13.5px; border-radius: 10px; cursor: pointer;">
         🔄 Xóa hết để làm lại từ đầu
       </button>
     `;
@@ -174,15 +173,14 @@ export class TestEvaluatorReading {
       if (a.innerHTML.trim() !== '') snapshotAI[a.id] = a.innerHTML;
     });
 
-    const now = new Date();
-    const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} - ${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`;
     const fullPageUrl = 'reading/' + (window.location.pathname.split('/').pop() || 'runner-reading.html') + window.location.search;
 
     const attemptSnapshot = {
       id: "attempt_" + Date.now(),
-      timestamp: timeStr + " (Sau sửa)",
+      timestamp: stateManager.getCurrentFormattedTimestamp() + " (Sau sửa)",
       testTitle: (this.testData.title || document.title) + " (Sau sửa)",
       pageUrl: fullPageUrl,
+      moduleType: 'reading',
       studentName: user.name,
       studentEmail: user.email,
       score: document.getElementById('scoreText')?.innerText || '',
@@ -196,11 +194,7 @@ export class TestEvaluatorReading {
     document.querySelectorAll('input.fill-input').forEach(i => attemptSnapshot.inputs[i.id] = i.value);
     document.querySelectorAll('input[type="radio"]:checked').forEach(r => attemptSnapshot.radios[r.name] = r.value);
 
-    try {
-      const localHist = JSON.parse(localStorage.getItem('ielts_local_history') || '[]');
-      localHist.unshift(attemptSnapshot);
-      localStorage.setItem('ielts_local_history', JSON.stringify(localHist));
-    } catch(e) {}
+    stateManager.saveAttempt(attemptSnapshot);
 
     if (CONFIG.DRIVE_STORAGE_URL) {
       fetch(CONFIG.DRIVE_STORAGE_URL, {
