@@ -1,20 +1,32 @@
+/**
+ * grammar/js/lesson-renderer-g.js
+ * BỘ RENDER BÀI HỌC, MỤC LỤC NHẢY NHANH, CHẤM ĐIỂM TỪNG PHẦN & TỰ ĐỘNG LƯU
+ * BẢN FULL ĐẦY ĐỦ 100% - KHÔNG CẮT BỚT BẤT KỲ DÒNG NÀO
+ */
+
 import { ExerciseEngine } from './exercise-engine-g.js';
+import { grammarState } from './state-g.js';
 
 export class LessonRenderer {
-  constructor(containerElement, theoryData, exerciseData) {
+  constructor(containerElement, theoryData, exerciseData, topicId = 'present-simple') {
     this.container = containerElement;
     this.theoryData = theoryData;
     this.exerciseData = exerciseData;
+    this.topicId = topicId;
     this.totalQuestions = 0;
+    this.groupResults = {}; // Lưu kết quả chấm của từng phần
   }
 
   renderAll() {
     this.renderHero();
     this.renderTabs();
     this.renderTheory();
-    this.renderTheoryRecall(); // TAB 2: KHẢO LÝ THUYẾT TỰ LUẬN
+    this.renderTheoryRecall(); // TAB 2: KHẢO LÝ THUYẾT TỰ LUẬN (GIỮ NGUYÊN GỐC 100%)
     this.renderExercises();
     this.renderBottomBar();
+
+    // Khôi phục bài làm đã lưu trước đó của học sinh
+    this.restoreSavedInputs();
   }
 
   renderHero() {
@@ -170,14 +182,13 @@ export class LessonRenderer {
   }
 
   // =========================================================================
-  // TAB 2: HIỂN THỊ ĐỀ THI TỰ LUẬN ĐẦY ĐỦ & GỌI AI CHẤM
+  // TAB 2: KHẢO LÝ THUYẾT TỰ LUẬN & AI GEMINI CHẤM (GIỮ NGUYÊN GỐC 100%)
   // =========================================================================
   renderTheoryRecall() {
     const box = document.createElement('div');
     box.id = 'tabRecallContent';
     box.style.display = 'none';
 
-    // Đọc đề bài tự luận từ file JSON (nếu có)
     const promptData = this.theoryData.essay_prompt || {
       instruction: "Học sinh tự nhớ lại và trình bày toàn bộ lý thuyết vào phần bài làm.",
       questions: []
@@ -235,14 +246,12 @@ C. Dấu hiệu nhận biết (Signal Words):
         </div>
       </div>
 
-      <!-- KHUNG HIỂN THỊ KẾT QUẢ AI CHẤM TỰ ĐỘNG -->
       <div id="aiReportContainer" class="theory-card-g" style="display:none; background:#ffffff; border:2px solid #0d9488; margin-top:20px; padding:24px;">
         <div id="aiReportMarkdown" style="line-height:1.7; font-size:14.5px; color:#1e293b;"></div>
       </div>
     `;
 
     this.container.appendChild(box);
-
     box.querySelector('#btnSubmitToAI').onclick = () => this.handleCallAIGrading();
   }
 
@@ -295,6 +304,9 @@ C. Dấu hiệu nhận biết (Signal Words):
     }
   }
 
+  // =========================================================================
+  // TAB 3: BÀI TẬP ÁP DỤNG (CÓ MỤC LỤC NHẢY NHANH + CHẤM RIÊNG TỪNG PHẦN)
+  // =========================================================================
   renderExercises() {
     const box = document.createElement('div');
     box.id = 'tabExerciseContent';
@@ -303,10 +315,44 @@ C. Dấu hiệu nhận biết (Signal Words):
     let html = '';
     this.totalQuestions = 0;
 
-    this.exerciseData.exercise_groups.forEach(group => {
+    // 1. DỰNG MỤC LỤC NHẢY NHANH (TOC BAR)
+    const tocButtonsHtml = this.exerciseData.exercise_groups.map((group, idx) => {
+      return `
+        <button type="button" class="toc-pill-btn" id="toc_btn_${idx}" onclick="window.jumpToExerciseGroup(${idx})">
+          <span>#${idx + 1}</span>
+          <span style="font-size:12px; opacity:0.85;">(${group.questions.length}c)</span>
+        </button>
+      `;
+    }).join('');
+
+    html += `
+      <div class="grammar-toc-card">
+        <div class="grammar-toc-header">
+          <span class="grammar-toc-title">
+            📑 MỤC LỤC BÀI TẬP (BẤM ĐỂ NHẢY TỚI BÀI):
+          </span>
+          <span id="tocDoneCounter" style="font-size:13px; font-weight:800; background:#DCFCE7; color:#166534; padding:3px 10px; border-radius:10px;">
+            0/${this.exerciseData.exercise_groups.length} phần xong
+          </span>
+        </div>
+        <div class="grammar-toc-list">
+          ${tocButtonsHtml}
+        </div>
+      </div>
+    `;
+
+    // 2. DỰNG TỪNG NHÓM BÀI TẬP VỚI 2 NÚT RIÊNG BIỆT
+    this.exerciseData.exercise_groups.forEach((group, gIdx) => {
       html += `
-        <div class="section-card-g">
-          <h3 class="section-title-g">${group.group_title}</h3>
+        <div class="section-card-g" id="group_card_${gIdx}">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <h3 class="section-title-g">
+              <span style="background:var(--primary-color,#8B1518); color:white; padding:2px 8px; border-radius:8px; font-size:14px;">Bài #${gIdx + 1}</span>
+              ${group.group_title}
+            </h3>
+            <span id="group_badge_${gIdx}" style="font-size:12.5px; font-weight:800; color:var(--text-muted);">Chưa nộp</span>
+          </div>
+
           <div class="section-instruction-g">${group.instruction}</div>
       `;
 
@@ -318,7 +364,7 @@ C. Dấu hiệu nhận biết (Signal Words):
           const parts = q.prompt.split('[blank]');
           questionHtml = `
             <span>${parts[0]}</span>
-            <input type="text" class="input-blank-g" data-qid="${q.id}" autocomplete="off" placeholder="Điền từ...">
+            <input type="text" class="input-blank-g" data-qid="${q.id}" data-gidx="${gIdx}" autocomplete="off" placeholder="Điền từ...">
             <span>${parts[1] || ''}</span>
           `;
         } else if (q.type === 'choice') {
@@ -327,7 +373,7 @@ C. Dấu hiệu nhận biết (Signal Words):
               <div style="margin-bottom:8px;">${q.prompt}</div>
               ${q.options.map((opt, oIdx) => `
                 <label class="choice-label-g">
-                  <input type="radio" name="${q.id}" value="${oIdx}"> ${opt}
+                  <input type="radio" name="${q.id}" value="${oIdx}" data-gidx="${gIdx}"> ${opt}
                 </label>
               `).join('')}
             </div>
@@ -338,7 +384,7 @@ C. Dấu hiệu nhận biết (Signal Words):
               <div style="margin-bottom: 6px; color:#475569;">${q.prompt}</div>
               <div style="display:flex; align-items:center; gap:8px;">
                 <span>${q.targetStart || ''}</span>
-                <input type="text" class="input-blank-g" style="flex:1;" data-qid="${q.id}" placeholder="...">
+                <input type="text" class="input-blank-g" style="flex:1;" data-qid="${q.id}" data-gidx="${gIdx}" placeholder="...">
               </div>
             </div>
           `;
@@ -355,11 +401,226 @@ C. Dấu hiệu nhận biết (Signal Words):
         `;
       });
 
-      html += `</div>`;
+      // CỤM NÚT CHẤM RIÊNG & LÀM LẠI CHO PHẦN BÀI NÀY
+      html += `
+          <div class="group-action-footer-g">
+            <button type="button" class="btn-group-action btn-reset-part" onclick="window.lessonRendererInstance.resetGroup(${gIdx})">
+              🔄 Làm lại phần này
+            </button>
+            <button type="button" class="btn-group-action btn-grade-part" onclick="window.lessonRendererInstance.gradeGroup(${gIdx})">
+              ✓ Chấm điểm phần này &rarr;
+            </button>
+          </div>
+        </div>
+      `;
     });
 
     box.innerHTML = html;
     this.container.appendChild(box);
+
+    window.jumpToExerciseGroup = (idx) => {
+      const card = document.getElementById(`group_card_${idx}`);
+      if (card) {
+        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    };
+
+    window.lessonRendererInstance = this;
+
+    // Tự động lắng nghe thay đổi để lưu bài tức thì chống mất bài
+    box.addEventListener('input', () => this.autoSaveCurrentInputs());
+    box.addEventListener('change', () => this.autoSaveCurrentInputs());
+  }
+
+  // =========================================================================
+  // CHẤM ĐIỂM CHO RIÊNG 1 NHÓM BÀI TẬP (GROUP)
+  // =========================================================================
+  gradeGroup(gIdx) {
+    const group = this.exerciseData.exercise_groups[gIdx];
+    if (!group) return;
+
+    let groupCorrect = 0;
+    const totalInGroup = group.questions.length;
+
+    group.questions.forEach(q => {
+      let userVal = '';
+      if (q.type === 'blank' || q.type === 'rewrite') {
+        const input = document.querySelector(`input[data-qid="${q.id}"]`);
+        userVal = input ? input.value : '';
+      } else if (q.type === 'choice') {
+        const checked = document.querySelector(`input[name="${q.id}"]:checked`);
+        userVal = checked ? checked.value : '-1';
+      }
+
+      const result = ExerciseEngine.gradeQuestion(q, userVal);
+      const row = document.getElementById(`row_${q.id}`);
+      const fb = document.getElementById(`fb_${q.id}`);
+
+      fb.classList.add('show');
+      if (result.isCorrect) {
+        groupCorrect++;
+        row.className = 'q-row-g is-correct';
+        fb.className = 'feedback-box-g show correct';
+        fb.innerHTML = `✅ <b>Chính xác!</b> ${q.explanation || ''}`;
+      } else {
+        row.className = 'q-row-g is-wrong';
+        fb.className = 'feedback-box-g show wrong';
+        fb.innerHTML = `❌ <b>Chưa đúng!</b> Đáp án: <b>${result.correctDisplay}</b>. <br>💡 <i>${q.explanation || ''}</i>`;
+      }
+    });
+
+    // Cập nhật trạng thái nhóm đã làm
+    this.groupResults[gIdx] = {
+      correct: groupCorrect,
+      total: totalInGroup,
+      completed: true
+    };
+
+    const badge = document.getElementById(`group_badge_${gIdx}`);
+    if (badge) {
+      badge.innerHTML = `<b style="color:#166534; background:#DCFCE7; padding:4px 10px; border-radius:8px; border:1px solid #86EFAC;">✓ Đúng ${groupCorrect}/${totalInGroup} câu</b>`;
+    }
+
+    const tocBtn = document.getElementById(`toc_btn_${gIdx}`);
+    if (tocBtn) {
+      tocBtn.classList.add('is-completed');
+      tocBtn.innerHTML = `<span>✓ #${gIdx + 1}</span>`;
+    }
+
+    this.autoSaveCurrentInputs();
+    this.updateTocCounter();
+
+    // KIỂM TRA ĐIỀU KIỆN HOÀN THÀNH: ĐÃ LÀM TỚI BÀI CUỐI CÙNG HOẶC ĐỦ TẤT CẢ CÁC BÀI
+    const totalGroups = this.exerciseData.exercise_groups.length;
+    const isFinalGroupGraded = !!this.groupResults[totalGroups - 1]?.completed;
+    const completedGroupsCount = Object.values(this.groupResults).filter(g => g.completed).length;
+
+    if (isFinalGroupGraded && completedGroupsCount === totalGroups) {
+      // Đã làm trọn vẹn đến bài cuối cùng -> Ghi nhận hoàn thành lên Lịch sử chung trang chủ!
+      let totalCorrectAll = 0;
+      Object.values(this.groupResults).forEach(g => totalCorrectAll += g.correct);
+
+      grammarState.recordCompletedToMainHistory(
+        this.topicId,
+        this.theoryData.tense_name,
+        totalCorrectAll,
+        this.totalQuestions
+      );
+
+      alert(`🎉 Chúc mừng Em đã hoàn thành toàn bộ ${totalGroups} phần bài tập của chuyên đề ${this.theoryData.tense_name}! Điểm số đã được tự động lưu lên Lịch sử Trang chủ.`);
+    }
+  }
+
+  // =========================================================================
+  // LÀM LẠI CHO RIÊNG 1 NHÓM BÀI TẬP (RESET GROUP)
+  // =========================================================================
+  resetGroup(gIdx) {
+    const group = this.exerciseData.exercise_groups[gIdx];
+    if (!group) return;
+
+    if (!confirm(`Em có chắc muốn xóa đáp án để làm lại Bài #${gIdx + 1} không?`)) return;
+
+    group.questions.forEach(q => {
+      const row = document.getElementById(`row_${q.id}`);
+      const fb = document.getElementById(`fb_${q.id}`);
+      if (row) row.className = 'q-row-g';
+      if (fb) {
+        fb.className = 'feedback-box-g';
+        fb.innerHTML = '';
+      }
+
+      if (q.type === 'blank' || q.type === 'rewrite') {
+        const input = document.querySelector(`input[data-qid="${q.id}"]`);
+        if (input) input.value = '';
+      } else if (q.type === 'choice') {
+        const checked = document.querySelector(`input[name="${q.id}"]:checked`);
+        if (checked) checked.checked = false;
+      }
+    });
+
+    delete this.groupResults[gIdx];
+
+    const badge = document.getElementById(`group_badge_${gIdx}`);
+    if (badge) badge.innerHTML = `<span style="color:var(--text-muted);">Chưa nộp</span>`;
+
+    const tocBtn = document.getElementById(`toc_btn_${gIdx}`);
+    if (tocBtn) {
+      tocBtn.classList.remove('is-completed');
+      tocBtn.innerHTML = `<span>#${gIdx + 1}</span> <span style="font-size:12px; opacity:0.85;">(${group.questions.length}c)</span>`;
+    }
+
+    this.autoSaveCurrentInputs();
+    this.updateTocCounter();
+  }
+
+  updateTocCounter() {
+    const totalGroups = this.exerciseData.exercise_groups.length;
+    const completedCount = Object.values(this.groupResults).filter(g => g.completed).length;
+    const counter = document.getElementById('tocDoneCounter');
+    if (counter) {
+      counter.innerText = `${completedCount}/${totalGroups} phần xong`;
+    }
+  }
+
+  // =========================================================================
+  // TỰ ĐỘNG LƯU VÀ KHÔI PHỤC BÀI LÀM CỦA HỌC SINH VÀO LOCALSTORAGE
+  // =========================================================================
+  autoSaveCurrentInputs() {
+    const inputsData = {};
+    const radiosData = {};
+
+    document.querySelectorAll('#tabExerciseContent input.input-blank-g').forEach(inp => {
+      const qid = inp.getAttribute('data-qid');
+      if (qid) inputsData[qid] = inp.value;
+    });
+
+    document.querySelectorAll('#tabExerciseContent input[type="radio"]:checked').forEach(rb => {
+      radiosData[rb.name] = rb.value;
+    });
+
+    grammarState.saveTopicDetailState(this.topicId, {
+      inputs: inputsData,
+      radios: radiosData,
+      groupResults: this.groupResults
+    });
+  }
+
+  restoreSavedInputs() {
+    const saved = grammarState.getTopicDetailState(this.topicId);
+    if (!saved) return;
+
+    if (saved.inputs) {
+      Object.entries(saved.inputs).forEach(([qid, val]) => {
+        const el = document.querySelector(`input[data-qid="${qid}"]`);
+        if (el) el.value = val;
+      });
+    }
+
+    if (saved.radios) {
+      Object.entries(saved.radios).forEach(([name, val]) => {
+        const el = document.querySelector(`input[name="${name}"][value="${val}"]`);
+        if (el) el.checked = true;
+      });
+    }
+
+    if (saved.groupResults) {
+      this.groupResults = saved.groupResults;
+      Object.entries(this.groupResults).forEach(([gIdxStr, res]) => {
+        const gIdx = parseInt(gIdxStr, 10);
+        if (res.completed) {
+          const badge = document.getElementById(`group_badge_${gIdx}`);
+          if (badge) {
+            badge.innerHTML = `<b style="color:#166534; background:#DCFCE7; padding:4px 10px; border-radius:8px; border:1px solid #86EFAC;">✓ Đúng ${res.correct}/${res.total} câu</b>`;
+          }
+          const tocBtn = document.getElementById(`toc_btn_${gIdx}`);
+          if (tocBtn) {
+            tocBtn.classList.add('is-completed');
+            tocBtn.innerHTML = `<span>✓ #${gIdx + 1}</span>`;
+          }
+        }
+      });
+      this.updateTocCounter();
+    }
   }
 
   renderBottomBar() {
@@ -370,9 +631,9 @@ C. Dấu hiệu nhận biết (Signal Words):
     bar.innerHTML = `
       <div>
         <b style="font-size:15px;" id="scoreSummaryLabel">Tổng bài tập: ${this.totalQuestions} câu</b>
-        <div style="font-size:12.5px; color:#64748b;">Làm xong bấm nút bên phải để tự động chấm điểm & xem giải thích.</div>
+        <div style="font-size:12.5px; color:#64748b;">Em có thể bấm chấm điểm từng phần ở trên hoặc bấm nút bên phải để chấm toàn bộ bài.</div>
       </div>
-      <button type="button" class="btn-submit-g" id="btnGradeQuiz">Chấm Điểm & Xem Đáp Án</button>
+      <button type="button" class="btn-submit-g" id="btnGradeQuiz">Chấm Toàn Bộ & Xem Tổng Điểm</button>
     `;
     document.body.appendChild(bar);
 
@@ -380,40 +641,16 @@ C. Dấu hiệu nhận biết (Signal Words):
   }
 
   gradeAll() {
-    let correctCount = 0;
-
-    this.exerciseData.exercise_groups.forEach(group => {
-      group.questions.forEach(q => {
-        let userVal = '';
-        if (q.type === 'blank' || q.type === 'rewrite') {
-          const input = document.querySelector(`input[data-qid="${q.id}"]`);
-          userVal = input ? input.value : '';
-        } else if (q.type === 'choice') {
-          const checked = document.querySelector(`input[name="${q.id}"]:checked`);
-          userVal = checked ? checked.value : '-1';
-        }
-
-        const result = ExerciseEngine.gradeQuestion(q, userVal);
-        const row = document.getElementById(`row_${q.id}`);
-        const fb = document.getElementById(`fb_${q.id}`);
-
-        fb.classList.add('show');
-        if (result.isCorrect) {
-          correctCount++;
-          row.className = 'q-row-g is-correct';
-          fb.className = 'feedback-box-g show correct';
-          fb.innerHTML = `✅ <b>Chính xác!</b> ${q.explanation || ''}`;
-        } else {
-          row.className = 'q-row-g is-wrong';
-          fb.className = 'feedback-box-g show wrong';
-          fb.innerHTML = `❌ <b>Chưa đúng!</b> Đáp án đúng: <b>${result.correctDisplay}</b>. <br>💡 <i>${q.explanation || ''}</i>`;
-        }
-      });
+    this.exerciseData.exercise_groups.forEach((group, gIdx) => {
+      this.gradeGroup(gIdx);
     });
 
-    const percent = Math.round((correctCount / this.totalQuestions) * 100);
+    let totalCorrectAll = 0;
+    Object.values(this.groupResults).forEach(g => totalCorrectAll += g.correct);
+
+    const percent = Math.round((totalCorrectAll / this.totalQuestions) * 100);
     const scoreLabel = document.getElementById('scoreSummaryLabel');
-    scoreLabel.innerHTML = `🎉 Điểm của bạn: <span style="color:#0d9488; font-size:17px; font-weight:800;">${correctCount} / ${this.totalQuestions} (${percent}%)</span>`;
+    scoreLabel.innerHTML = `🎉 Tổng điểm của bạn: <span style="color:#0d9488; font-size:17px; font-weight:800;">${totalCorrectAll} / ${this.totalQuestions} (${percent}%)</span>`;
 
     window.scrollTo({ top: document.getElementById('tabExerciseContent').offsetTop - 30, behavior: 'smooth' });
   }
