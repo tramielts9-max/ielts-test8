@@ -1,7 +1,7 @@
 /**
  * PRE-SPEAKING CONTROLLER (-ps)
  * Tích hợp Màn hình Portal Danh sách Card + Chuyển phòng Luyện Nói
- * DUOLINGO X TRẠM IELTS - ĐÃ BỎ 100% ICON GÂY LỖI Ô VUÔNG
+ * BẢN FULL ĐẦY ĐỦ 100% - LƯU TOÀN BỘ TEXT ĐÃ NÓI, ĐIỂM SỐ & XEM LẠI CÁC LẦN NỘP
  */
 
 // 1. MÃ HÓA RUNTIME AUTH KEY GỐC
@@ -29,6 +29,7 @@ const ACTIVE_MODELS = [
 ];
 
 const STORAGE_KEY_PS_HISTORY = 'ps_completed_lessons_history';
+const CLOUD_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyNErQQFdciAQM0k9KUrACtpX7rxKkopjChYAC2Ubwj5MGzFOeekDEGs8C1n7P9cNR6vg/exec";
 
 let manifestData = null;
 let currentCatalog = null;
@@ -58,7 +59,32 @@ window.addEventListener('DOMContentLoaded', async () => {
   initSpeechRecognition();
 });
 
-// ================== QUẢN LÝ TIẾN ĐỘ LÀM BÀI ==================
+// =========================================================================
+// QUẢN LÝ LƯU TRỮ VĂN BẢN ĐÃ NÓI (TRANSCRIPT) & ĐIỂM SỐ TỪNG LẦN
+// =========================================================================
+function getPSStorageKey(lessonId) {
+  return `ielts_ps_attempts_${lessonId}`;
+}
+
+function getPSAttempts(lessonId) {
+  try {
+    const raw = localStorage.getItem(getPSStorageKey(lessonId));
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function savePSAttempt(lessonId, attemptData) {
+  try {
+    const attempts = getPSAttempts(lessonId);
+    attempts.unshift(attemptData); // Mới nhất lên đầu
+    localStorage.setItem(getPSStorageKey(lessonId), JSON.stringify(attempts));
+  } catch (e) {
+    console.warn("Lỗi lưu lần nói Pre-Speaking:", e);
+  }
+}
+
 function getCompletedHistory() {
   try {
     return JSON.parse(localStorage.getItem(STORAGE_KEY_PS_HISTORY) || '{}');
@@ -166,7 +192,8 @@ function renderPortalCards(lessonsList) {
 
   let completedCount = 0;
   lessonsList.forEach(l => {
-    if (history[l.id]) completedCount++;
+    const attempts = getPSAttempts(l.id);
+    if (attempts.length > 0 || history[l.id]) completedCount++;
   });
 
   if (progressBadge) {
@@ -183,12 +210,15 @@ function renderPortalCards(lessonsList) {
   }
 
   grid.innerHTML = lessonsList.map(l => {
+    const attempts = getPSAttempts(l.id);
     const record = history[l.id];
-    const isDone = !!record;
+    const isDone = attempts.length > 0 || !!record;
+    const count = attempts.length > 0 ? attempts.length : (record?.count || 1);
+    const latestScore = attempts.length > 0 ? `${attempts[0].overall}%` : 'Đã nộp';
 
     const statusBadge = isDone
       ? `<span class="ps-pill-tag" style="background: #DCFCE7; color: #166534; border-color: #86EFAC;">
-           ✓ Đã làm ${record.count} lần (${record.lastDate})
+           ✓ Đã làm ${count} lần (${latestScore})
          </span>`
       : `<span style="font-size: 12.5px; font-weight: 800; color: var(--text-muted);">
            ● Chưa làm
@@ -212,13 +242,25 @@ function renderPortalCards(lessonsList) {
           </div>
         </div>
 
-        <button 
-          onclick="window.startLessonFromPortal('${l.levelId}', '${l.id}')"
-          class="btn-3d ${isDone ? 'btn-3d-green' : 'btn-3d-purple'}"
-          style="width: 100%; margin-top: 16px; padding: 11px; font-size: 13.5px;"
-        >
-          ${isDone ? 'Luyện lại bài này →' : 'Vào luyện nói →'}
-        </button>
+        <div style="display: flex; gap: 8px; margin-top: 16px;">
+          <button 
+            onclick="window.startLessonFromPortal('${l.levelId}', '${l.id}')"
+            class="btn-3d ${isDone ? 'btn-3d-green' : 'btn-3d-purple'}"
+            style="flex: 1; padding: 11px; font-size: 13px;"
+          >
+            ${isDone ? `+ Luyện tiếp lần ${count + 1}` : 'Vào luyện nói →'}
+          </button>
+          ${isDone ? `
+            <button 
+              onclick="window.openPastAttemptsFromPortal('${l.levelId}', '${l.id}')"
+              class="btn-3d btn-3d-white"
+              style="padding: 11px 12px; font-size: 13px;"
+              title="Xem lại bài nói và điểm các lần trước"
+            >
+              👁️ Xem (${count})
+            </button>
+          ` : ''}
+        </div>
       </div>
     `;
   }).join('');
@@ -245,6 +287,13 @@ window.startLessonFromPortal = async (levelId, lessonId) => {
     levelSel.value = levelId;
     await handleLevelChange(lessonId);
   }
+};
+
+window.openPastAttemptsFromPortal = async (levelId, lessonId) => {
+  await window.startLessonFromPortal(levelId, lessonId);
+  setTimeout(() => {
+    window.viewPastAttemptDetailPS(0);
+  }, 400);
 };
 
 window.backToPortal = () => {
@@ -364,8 +413,82 @@ window.handleLessonChange = () => {
     if (ytPlayer && ytPlayer.loadVideoById) {
       ytPlayer.loadVideoById(currentLesson.videoId);
     }
+
+    renderWorkspacePastAttemptsBar();
   }
   resetUI();
+};
+
+// =========================================================================
+// THANH HIỂN THỊ CÁC LẦN NÓI CŨ ĐỂ HỌC SINH XEM LẠI BẤT KỲ LÚC NÀO
+// =========================================================================
+function renderWorkspacePastAttemptsBar() {
+  if (!currentLesson) return;
+  let bar = document.getElementById('psPastAttemptsBar');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'psPastAttemptsBar';
+    const grid = document.querySelector('.ps-workspace-grid');
+    if (grid) grid.parentNode.insertBefore(bar, grid);
+  }
+
+  const attempts = getPSAttempts(currentLesson.id);
+  if (attempts.length === 0) {
+    bar.innerHTML = '';
+    return;
+  }
+
+  let html = `
+    <div style="background: #F0FDF4; border: 2px solid #86EFAC; border-radius: 16px; padding: 12px 18px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+      <div>
+        <b style="color: #166534; font-size: 14px;">📜 Bài này Em đã nói ${attempts.length} lần trước đây:</b>
+        <div style="display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap;">
+  `;
+
+  attempts.forEach((att, idx) => {
+    html += `
+      <button type="button" onclick="window.viewPastAttemptDetailPS(${idx})" style="background: #FFFFFF; border: 1.5px solid #86EFAC; border-bottom: 3px solid #22C55E; padding: 4px 10px; border-radius: 8px; font-weight: 800; font-size: 12.5px; cursor: pointer; color: #166534;">
+        Lần ${att.attemptNum || (attempts.length - idx)}: <b>${att.overall}%</b> (${att.timestamp.split(' - ')[0]})
+      </button>
+    `;
+  });
+
+  html += `
+        </div>
+      </div>
+      <span style="font-size: 12px; color: #15803D; font-weight: 700;">Nhấp vào lần làm để xem lại bản ký âm cũ</span>
+    </div>
+  `;
+
+  bar.innerHTML = html;
+}
+
+window.viewPastAttemptDetailPS = (idx) => {
+  if (!currentLesson) return;
+  const attempts = getPSAttempts(currentLesson.id);
+  const att = attempts[idx];
+  if (!att) return;
+
+  const txtArea = document.getElementById('speechTranscript');
+  if (txtArea) txtArea.value = att.transcript || '';
+
+  document.getElementById('resOverall').innerText = att.overall || '--';
+  document.getElementById('resFluency').innerText = att.fluency || '--';
+  document.getElementById('resPronun').innerText = att.pronun || '--';
+  document.getElementById('resFeedback').innerText = `📜 [BẢN LƯU LẦN ${att.attemptNum || 1} - ${att.timestamp}]:\n${att.feedback || ''}`;
+
+  const missedBox = document.getElementById('resMissedWords');
+  missedBox.innerHTML = '';
+  if (att.missedWords && att.missedWords.length > 0) {
+    att.missedWords.forEach(w => {
+      const sp = document.createElement('span');
+      sp.style.cssText = "padding: 3px 8px; background: #FEE2E2; color: #991B1B; border: 1.5px solid #FCA5A5; border-radius: 8px; font-weight: 800; font-size: 12.5px;";
+      sp.innerText = w;
+      missedBox.appendChild(sp);
+    });
+  } else {
+    missedBox.innerHTML = '<span style="color: #166534; font-weight: 800; font-size: 13px;">🎉 Phát âm rất chuẩn xác, không bị nuốt từ!</span>';
+  }
 };
 
 // ================== YOUTUBE API ==================
@@ -605,7 +728,7 @@ HÃY ĐỐI CHIẾU VÀ ĐÁNH GIÁ:
 
     const parsed = JSON.parse(rawText);
     hideOverlay();
-    renderGradingResult(parsed, durationSec);
+    renderGradingResult(parsed, durationSec, transcriptText);
   } catch (err) {
     hideOverlay();
     alert("Lỗi chấm điểm: " + err.message);
@@ -613,7 +736,7 @@ HÃY ĐỐI CHIẾU VÀ ĐÁNH GIÁ:
 }
 
 // BẢNG KẾT QUẢ VÀ TIÊU CHUẨN HOÀN THÀNH
-function renderGradingResult(data, durationSec) {
+function renderGradingResult(data, durationSec, transcriptText) {
   document.getElementById('resOverall').innerText = data.overall_score || 0;
   document.getElementById('resFluency').innerText = data.fluency_score || 0;
   document.getElementById('resPronun').innerText = data.pronunciation_score || 0;
@@ -654,6 +777,16 @@ function renderGradingResult(data, durationSec) {
     badge.innerText = "✕ CHƯA ĐẠT";
     completeBtn.disabled = true;
   }
+
+  // TẠM LƯU DỮ LIỆU ĐỂ KHI BẤM NÚT HOÀN THÀNH SẼ LƯU ĐẦY ĐỦ
+  window.lastGradingSnapshot = {
+    transcript: transcriptText,
+    overall: data.overall_score || 0,
+    fluency: data.fluency_score || 0,
+    pronun: data.pronunciation_score || 0,
+    missedWords: data.missed_words || [],
+    feedback: data.feedback || ''
+  };
 }
 
 function resetUI() {
@@ -673,38 +806,56 @@ function resetUI() {
   document.getElementById('btnComplete').disabled = true;
 }
 
-// XÁC NHẬN HOÀN THÀNH -> LƯU TIẾN ĐỘ & BẮN GOOGLE DRIVE
+// XÁC NHẬN HOÀN THÀNH -> LƯU TIẾN ĐỘ, VĂN BẢN ĐÃ NÓI & BẮN GOOGLE DRIVE
 window.completeLessonSubmission = () => {
-  if (currentLesson) {
-    saveCompletedLesson(currentLesson.id);
-  }
+  if (!currentLesson) return;
 
+  saveCompletedLesson(currentLesson.id);
+
+  const now = new Date();
+  const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} - ${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`;
+  const sName = localStorage.getItem('ielts_student_name') || 'Học viên';
+  const sEmail = localStorage.getItem('ielts_student_email') || '';
+  const sc = document.getElementById('resOverall')?.innerText || '60';
+  const transcriptText = document.getElementById('speechTranscript')?.value || '';
+
+  const attempts = getPSAttempts(currentLesson.id);
+  const newAttemptNum = attempts.length + 1;
+
+  // 1. LƯU VĂN BẢN VÀ ĐIỂM SỐ VÀO DANH SÁCH LẦN LÀM RIÊNG BIỆT
+  const newAttemptRecord = {
+    attemptNum: newAttemptNum,
+    timestamp: timeStr,
+    transcript: transcriptText,
+    overall: sc,
+    fluency: document.getElementById('resFluency')?.innerText || 0,
+    pronun: document.getElementById('resPronun')?.innerText || 0,
+    missedWords: window.lastGradingSnapshot?.missedWords || [],
+    feedback: document.getElementById('resFeedback')?.innerText || ''
+  };
+
+  savePSAttempt(currentLesson.id, newAttemptRecord);
+
+  // 2. LƯU LỊCH SỬ CHUNG TRANG CHỦ & BẮN LÊN GOOGLE DRIVE
   try {
-    const now = new Date();
-    const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} - ${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`;
-    const sName = localStorage.getItem('ielts_student_name') || 'Học viên';
-    const sEmail = localStorage.getItem('ielts_student_email') || '';
-    const sc = document.getElementById('resOverall')?.innerText || '60';
-
     const attemptSnapshot = {
       id: "attempt_ps_" + Date.now(),
-      timestamp: timeStr,
-      testTitle: `Pre-Speaking: [${currentLesson.id}] ${currentLesson.title}`,
+      timestamp: `${timeStr} (Lần ${newAttemptNum})`,
+      testTitle: `Pre-Speaking: [${currentLesson.id}] ${currentLesson.title} (Lần ${newAttemptNum})`,
       studentName: sName,
       studentEmail: sEmail,
       score: `${sc}%`,
       timeSpent: `${secondsRecorded}s`,
-      details: `Fluency: ${document.getElementById('resFluency')?.innerText || 0}% | Pronunciation: ${document.getElementById('resPronun')?.innerText || 0}%\nNhận xét: ${document.getElementById('resFeedback')?.innerText || ''}`,
-      pageUrl: "pre-speaking/index-ps.html"
+      details: `BẢN KÝ ÂM (HỌC VIÊN ĐÃ NÓI):\n"${transcriptText}"\n\nKẾT QUẢ ĐÁNH GIÁ AI:\nOverall: ${sc}% | Fluency: ${document.getElementById('resFluency')?.innerText || 0}% | Pronunciation: ${document.getElementById('resPronun')?.innerText || 0}%\nNhận xét: ${document.getElementById('resFeedback')?.innerText || ''}`,
+      pageUrl: "pre-speaking/index-ps.html",
+      moduleType: "pre_speaking"
     };
 
-    // 1. Lưu LocalStorage
     const localHist = JSON.parse(localStorage.getItem('ielts_local_history') || '[]');
     localHist.unshift(attemptSnapshot);
     localStorage.setItem('ielts_local_history', JSON.stringify(localHist));
 
-    // 2. Bắn lên Google Drive
-    fetch("https://script.google.com/macros/s/AKfycbyNErQQFdciAQM0k9KUrACtpX7rxKkopjChYAC2Ubwj5MGzFOeekDEGs8C1n7P9cNR6vg/exec", {
+    fetch(CLOUD_SCRIPT_URL, {
       method: "POST",
       mode: "no-cors",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
@@ -714,7 +865,7 @@ window.completeLessonSubmission = () => {
     console.warn("Lỗi lưu Pre-Speaking:", errHist);
   }
 
-  alert(`🎉 Chúc mừng em đã hoàn thành bài tập [${currentLesson.id}]! Hệ thống đã ghi nhận tiến độ.`);
+  alert(`🎉 Chúc mừng em đã hoàn thành bài tập [${currentLesson.id}] Lần ${newAttemptNum}! Toàn bộ bài nói và điểm số đã được lưu an toàn.`);
   window.backToPortal();
 };
 
