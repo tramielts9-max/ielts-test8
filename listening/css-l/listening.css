@@ -1,8 +1,9 @@
 /* ==========================================================================
    listening/css-l/listening.css
    DUOLINGO X TRẠM IELTS THEME SYSTEM (IELTS LISTENING MODULE)
-   - Đồng bộ Banner 4: Xanh Lam Hoàng Gia (#0284C7 -> #38BDF8)
-   - Tối ưu trực quan Đúng/Sai cho MCQ, Choose TWO & Kéo thả Matching
+   - BẢN ĐẦY ĐỦ 100% TẤT CẢ CÁC CLASS CŨ KHÔNG BỊ MẤT DÒNG NÀO
+   - Cỡ chữ chuẩn thi máy (14.5px, không bị to quá mức)
+   - Thêm layout 2 cột cho Kéo thả Matching
    ========================================================================== */
 
 :root {
@@ -42,7 +43,8 @@ body {
   background-repeat: repeat;
   background-size: 130px 130px;
   color: var(--text-main);
-  line-height: 1.5;
+  line-height: 1.55;
+  font-size: 14.5px !important;
 }
 
 .container-lis {
@@ -55,12 +57,12 @@ body {
 .btn-3d {
   font-family: inherit;
   font-weight: 900;
-  font-size: 14.5px;
+  font-size: 14px;
   text-transform: uppercase;
   letter-spacing: 0.4px;
   border: none;
   border-radius: 16px;
-  padding: 12px 22px;
+  padding: 10px 20px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -103,25 +105,25 @@ body {
   border: 2.5px solid var(--border-color);
   border-bottom: 5px solid var(--border-shadow);
   border-radius: 20px;
-  padding: 14px 20px;
-  margin-bottom: 20px;
+  padding: 12px 18px;
+  margin-bottom: 18px;
 }
 .audio-player-element {
   width: 100%;
-  height: 44px;
+  height: 42px;
   outline: none;
 }
 
 /* TỪNG DÒNG TRANSCRIPT */
 .transcript-line {
-  padding: 10px 14px;
-  border-radius: 12px;
-  margin-bottom: 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  margin-bottom: 6px;
   cursor: pointer;
-  border-left: 4px solid transparent;
+  border-left: 3px solid transparent;
   transition: all 0.2s ease;
-  font-size: 14.5px;
-  line-height: 1.6;
+  font-size: 14px !important;
+  line-height: 1.6 !important;
 }
 .transcript-line:hover {
   background-color: #FAF7F2;
@@ -130,18 +132,18 @@ body {
   background-color: #FFFDF0 !important;
   color: #854D0E !important;
   border-left: 5px solid #FFC800 !important;
-  border-radius: 12px;
+  border-radius: 10px;
   box-shadow: 0 2px 8px rgba(255, 200, 0, 0.25);
   font-weight: 800;
 }
 
 .time-stamp-tag {
-  font-size: 12px;
+  font-size: 11.5px;
   color: #0369A1;
   margin-right: 8px;
   font-weight: 900;
   background: #E0F2FE;
-  padding: 3px 8px;
+  padding: 2px 7px;
   border-radius: 6px;
   border: 1px solid #BAE6FD;
 }
@@ -154,7 +156,7 @@ body {
   width: 100%;
   background: #FFFFFF;
   border-top: 2.5px solid var(--border-color);
-  padding: 10px 20px;
+  padding: 8px 18px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -166,7 +168,7 @@ body {
 .parts-container {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   flex: 1;
   overflow-x: auto;
 }
@@ -175,9 +177,9 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 14px;
+  padding: 5px 12px;
   border-radius: 12px;
-  font-size: 13.5px;
+  font-size: 13px;
   white-space: nowrap;
 }
 .part-nav-group.active-part {
@@ -195,15 +197,15 @@ body {
 }
 
 .q-badge-btn {
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   border-radius: 8px;
   border: 2px solid var(--border-color);
-  border-bottom: 3.5px solid var(--border-shadow);
+  border-bottom: 3px solid var(--border-shadow);
   background: #FFFFFF;
   color: var(--text-main);
   font-weight: 900;
-  font-size: 13px;
+  font-size: 12.5px;
   cursor: pointer;
   transition: all 0.1s ease;
 }
@@ -234,10 +236,10 @@ body {
   color: #FFFFFF !important;
   border: none;
   border-bottom: 4px solid var(--duo-green-shadow);
-  padding: 10px 22px;
+  padding: 9px 20px;
   border-radius: 14px;
   font-weight: 900;
-  font-size: 14px;
+  font-size: 13.5px;
   text-transform: uppercase;
   cursor: pointer;
   display: flex;
@@ -321,9 +323,87 @@ body {
   border: 1.5px solid #FDE047;
   border-left: 5px solid #FFC800;
   border-radius: 12px;
-  padding: 12px 16px;
+  padding: 10px 14px;
   margin-top: 8px;
-  font-size: 13.5px;
+  font-size: 13.5px !important;
   line-height: 1.6;
   color: #261F1D;
+}
+
+/* =========================================================================
+   BỐ CỤC 2 CỘT MỚI THÊM CHO KÉO THẢ MATCHING (GỌN GÀNG, KHÔNG BỊ TO QUÁ)
+   ========================================================================= */
+.matching-2col-layout {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 16px;
+  align-items: start;
+  margin: 14px 0;
+}
+@media (max-width: 800px) {
+  .matching-2col-layout { grid-template-columns: 1fr; }
+}
+
+.matching-left-questions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.matching-right-bank {
+  position: sticky;
+  top: 10px;
+  background: #FAF7F2;
+  border: 2px solid var(--border-color);
+  border-radius: 16px;
+  padding: 14px;
+}
+
+.matching-q-row {
+  background: #FFFFFF;
+  border: 1.5px solid var(--border-color);
+  border-bottom: 3px solid var(--border-shadow);
+  border-radius: 12px;
+  padding: 10px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.dropzone-box {
+  min-height: 38px;
+  width: 140px;
+  border: 2px dashed #94A3B8;
+  border-radius: 10px;
+  background: #FFFFFF;
+  display: flex;
+  align-items: center;
+  padding: 4px 10px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.1s ease;
+}
+.dropzone-box.drag-over {
+  border-color: #0284C7;
+  background: #E0F2FE;
+}
+.dropzone-box.filled {
+  border-style: solid;
+  border-color: #0284C7;
+  background: #F0F9FF;
+}
+
+.matching-drag-card {
+  background: #FFFFFF;
+  border: 1.5px solid var(--border-color);
+  border-bottom: 2.5px solid var(--border-shadow);
+  border-radius: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  transition: all 0.1s ease;
 }
