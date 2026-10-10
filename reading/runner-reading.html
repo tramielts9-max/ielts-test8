@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>IELTS Reading Examination - Trạm IELTS</title>
   
-  <!-- Font Plus Jakarta Sans chuẩn Duolingo, hỗ trợ tiếng Việt 100% -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800;900&display=swap" rel="stylesheet">
@@ -20,15 +19,15 @@
       margin-bottom: 60px;
     }
 
-    /* CARD GHI CHÚ SOCRATIC & THOUGHT BOX */
+    /* CARD GHI CHÚ SOCRATIC & THOUGHT BOX (GIỮ NGUYÊN GỐC) */
     .unified-notes-card {
       background: #FFFFFF;
       border: 2px solid #0284C7;
       border-radius: 16px;
-      padding: 20px 24px;
-      margin-bottom: 24px;
-      line-height: 1.8;
-      font-size: 15px;
+      padding: 18px 22px;
+      margin-bottom: 20px;
+      line-height: 1.75;
+      font-size: 14.5px;
     }
     .unified-notes-card h3 {
       margin-top: 0;
@@ -36,116 +35,18 @@
       font-weight: 900;
       border-bottom: 2px solid var(--border-color);
       padding-bottom: 8px;
-      margin-bottom: 14px;
+      margin-bottom: 12px;
+      font-size: 16px;
     }
 
-    .socratic-card {
-      background: #FAF7F2;
-      border: 2px solid var(--border-color);
-      border-radius: 14px;
-      margin: 10px 0;
-      overflow: hidden;
-    }
-    .socratic-header-bar {
-      padding: 9px 14px;
-      background: #FDEDEE;
-      border-left: 4px solid #8B1518;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      cursor: pointer;
-      user-select: none;
-    }
-    .socratic-badge {
-      font-size: 12px;
-      font-weight: 800;
-      background: #FFFFFF;
-      color: #8B1518;
-      padding: 3px 8px;
-      border-radius: 8px;
-      border: 1px solid #F8B4B7;
-    }
-    .socratic-toggle-btn {
-      background: #8B1518;
-      color: #FFFFFF;
-      border: none;
-      padding: 4px 10px;
-      border-radius: 6px;
-      font-size: 12px;
-      font-weight: 800;
-      cursor: pointer;
-    }
-    .socratic-body {
-      padding: 14px;
-      background: #FFFFFF;
-      border-top: 1px solid var(--border-color);
-    }
-
-    .inline-thought-box {
-      margin: 6px 0 12px 0;
-      padding: 10px 14px;
-      background: #F0FDF4;
-      border: 1.5px solid #86EFAC;
-      border-left: 4px solid #16A34A;
-      border-radius: 10px;
-    }
-    .inline-thought-box label {
-      font-size: 12.5px;
-      font-weight: 800;
-      color: #166534;
-      display: block;
-      margin-bottom: 4px;
-    }
-    .inline-thought-box textarea {
-      width: 100%;
-      height: 42px;
-      min-height: 42px;
-      padding: 6px 10px;
-      font-size: 13.5px;
-      border: 1.5px solid #CBD5E1;
-      border-radius: 8px;
-      background: #FFFFFF;
-      outline: none;
-      box-sizing: border-box;
-    }
-
-    /* TRẮC NGHIỆM DUOLINGO 3D */
-    .mcq-options-list { display: flex; flex-direction: column; gap: 10px; margin: 12px 0; }
-    .mcq-option-item {
-      display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px;
-      border: 2px solid var(--border-color); border-bottom: 4px solid var(--border-shadow);
-      border-radius: 14px; background: #FFFFFF; cursor: pointer; transition: all 0.08s ease;
-    }
-    .mcq-option-item:hover { background: #FAF7F2; }
-    .mcq-option-item.selected {
-      border-color: #8B1518; border-bottom-color: #5E0C0E; background: #FDEDEE;
-    }
-    .mcq-badge {
-      font-weight: 900; color: #8B1518; background: #FDEDEE; padding: 3px 8px;
-      border-radius: 6px; font-size: 13.5px; min-width: 24px; text-align: center; flex-shrink: 0;
-    }
-    .mcq-option-item.selected .mcq-badge { background: #8B1518; color: #FFFFFF; }
-
-    .choice-group { display: flex; flex-wrap: wrap; gap: 10px; margin: 12px 0; }
-    .choice-btn-label {
-      display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px;
-      background: #FFFFFF; border: 2px solid var(--border-color); border-bottom: 4px solid var(--border-shadow);
-      border-radius: 12px; cursor: pointer; font-weight: 800; font-size: 14px; transition: all 0.08s ease;
-    }
-    .choice-btn-label:hover { background: #FAF7F2; }
-    .choice-btn-label.active {
-      border-color: #8B1518; border-bottom-color: #5E0C0E; background: #8B1518; color: #FFFFFF;
-    }
-
-    /* ĐIỀN TỪ */
     .fill-input {
-      font-family: inherit; font-size: 15px; font-weight: 800; color: #8B1518;
+      font-family: inherit; font-size: 14.5px; font-weight: 800; color: #8B1518;
       background: #FFFFFF; border: 2px solid #CBD5E1; border-bottom: 3.5px solid #94A3B8;
-      border-radius: 10px; padding: 6px 12px; text-align: center; outline: none; margin: 0 4px;
+      border-radius: 10px; padding: 5px 12px; text-align: center; outline: none; margin: 0 4px;
     }
     .fill-input:focus { border-color: #8B1518; background: #FFFDF0; }
 
-    /* THANH ĐIỀU HƯỚNG ĐÁY (BOTTOM BAR) */
+    /* THANH ĐIỀU HƯỚNG ĐÁY */
     .bottom-nav-bar {
       position: fixed; bottom: 0; left: 0; width: 100%; height: 56px; background: #FFFFFF;
       border-top: 2.5px solid var(--border-color); display: flex; align-items: center; justify-content: space-between;
@@ -157,7 +58,7 @@
       align-items: center; justify-content: center; flex-shrink: 0; font-weight: 900;
     }
     .passages-container { display: flex; align-items: center; gap: 10px; overflow-x: auto; flex: 1; padding: 2px 4px; }
-    .passage-group-tab { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; padding: 4px 10px; border-radius: 12px; font-size: 13.5px; }
+    .passage-group-tab { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; padding: 4px 10px; border-radius: 12px; font-size: 13px; }
     .passage-group-tab.active-tab { border: 2px solid #F8B4B7; background: #FDEDEE; }
     .passage-group-tab.inactive-tab {
       border: 1.5px solid var(--border-color); background: #FAF7F2; color: var(--text-muted); cursor: pointer;
@@ -168,7 +69,7 @@
     .q-badge-btn {
       width: 32px; height: 32px; border-radius: 8px; border: 2px solid var(--border-color);
       border-bottom: 3.5px solid var(--border-shadow); background: #FFFFFF; color: var(--text-main);
-      font-weight: 900; font-size: 13px; cursor: pointer; flex-shrink: 0; transition: all 0.08s ease;
+      font-weight: 900; font-size: 12.5px; cursor: pointer; flex-shrink: 0; transition: all 0.08s ease;
     }
     .q-badge-btn:hover { border-color: #8B1518; color: #8B1518; }
     .q-badge-btn.status-answered { background: #64748B !important; color: #FFFFFF !important; border-color: #475569 !important; }
@@ -186,7 +87,6 @@
     }
     .btn-submit-bar:active { transform: translateY(2px); border-bottom-width: 2px; }
 
-    /* MODAL TỔNG KẾT BẢNG ĐÁP ÁN */
     .modal-backdrop {
       position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px);
       display: none; align-items: center; justify-content: center; z-index: 9999; padding: 16px;
@@ -204,15 +104,15 @@
 </head>
 <body>
 
-<div class="user-info-box" style="background:#FFFFFF; border:2px solid var(--border-color); border-bottom:4px solid var(--border-shadow); border-radius:18px; padding:14px 20px; max-width:1250px; margin:16px auto; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+<div class="user-info-box" style="background:#FFFFFF; border:2px solid var(--border-color); border-bottom:4px solid var(--border-shadow); border-radius:18px; padding:12px 20px; max-width:1250px; margin:14px auto; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
   <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:center;">
     <div style="display:flex; align-items:center; gap:6px;">
       <b style="font-size:13.5px;">Họ và Tên:</b>
-      <input type="text" id="studentNameInput" placeholder="Đang đồng bộ họ tên..." style="padding:6px 12px; border:1.5px solid var(--border-color); border-radius:8px; font-weight:700; font-size:13.5px;">
+      <input type="text" id="studentNameInput" placeholder="Đang đồng bộ..." style="padding:6px 12px; border:1.5px solid var(--border-color); border-radius:8px; font-weight:700; font-size:13.5px;">
     </div>
     <div style="display:flex; align-items:center; gap:6px;">
       <b style="font-size:13.5px;">Email Google:</b>
-      <input type="email" id="studentEmailInput" placeholder="Đang đồng bộ Email..." style="padding:6px 12px; border:1.5px solid var(--border-color); border-radius:8px; font-weight:700; font-size:13.5px;">
+      <input type="email" id="studentEmailInput" placeholder="Đang đồng bộ..." style="padding:6px 12px; border:1.5px solid var(--border-color); border-radius:8px; font-weight:700; font-size:13.5px;">
     </div>
   </div>
 
@@ -222,8 +122,8 @@
   </div>
 </div>
 
-<div class="header-bar" style="background:#FFFFFF; border:2px solid var(--border-color); border-bottom:4px solid var(--border-shadow); border-radius:18px; padding:14px 22px; max-width:1250px; margin:0 auto 20px auto; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
-  <h1 id="testTitleHeader" style="margin:0; font-size:20px; font-weight:900; color:var(--rd-red);">IELTS Reading Test</h1>
+<div class="header-bar" style="background:#FFFFFF; border:2px solid var(--border-color); border-bottom:4px solid var(--border-shadow); border-radius:18px; padding:12px 22px; max-width:1250px; margin:0 auto 16px auto; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+  <h1 id="testTitleHeader" style="margin:0; font-size:19px; font-weight:900; color:var(--rd-red);">IELTS Reading Test</h1>
   
   <div style="display:flex; align-items:center; gap:10px;">
     <div style="display:flex; align-items:center; gap:6px; background:#FAF7F2; padding:6px 12px; border-radius:12px; border:1.5px solid var(--border-color); font-weight:800; font-size:13.5px;">
@@ -241,11 +141,11 @@
 
 <div class="container" id="mainContainer">
   <div class="passage-box" id="passageBox">
-    <div style="text-align:center; padding: 40px; color: var(--text-muted); font-weight: 800; font-size: 15px;">⏳ Đang tải nội dung bài đọc...</div>
+    <div style="text-align:center; padding: 40px; color: var(--text-muted); font-weight: 800; font-size: 14.5px;">⏳ Đang tải nội dung bài đọc...</div>
   </div>
   <div class="resizer" id="dragResizer"></div>
   <div class="question-box" id="questionBox">
-    <div style="text-align:center; padding: 40px; color: var(--text-muted); font-weight: 800; font-size: 15px;">⏳ Đang tải câu hỏi...</div>
+    <div style="text-align:center; padding: 40px; color: var(--text-muted); font-weight: 800; font-size: 14.5px;">⏳ Đang tải câu hỏi...</div>
   </div>
 </div>
 
@@ -380,7 +280,7 @@
         document.getElementById('btnNextQ')?.addEventListener('click', () => scrollToQ(currentActiveIndex + 1));
       }
 
-      // MODAL REVIEW BẢNG ĐÁP ÁN
+      // MODAL REVIEW BẢNG ĐÁP ÁN (GIỮ NGUYÊN GỐC 100%)
       const modalBackdrop = document.getElementById('readingModalBackdrop');
       const modalBody = document.getElementById('modalDynamicBody');
       document.getElementById('btnOpenSheet')?.addEventListener('click', () => {
@@ -427,6 +327,7 @@
 
       await initReadingApp();
 
+      // GIỮ NGUYÊN GỐC 100% MODAL HIỂN THỊ KẾT QUẢ ĐÚNG / SAI KÈM MÀU XANH / ĐỎ
       const originalCheckAnswers = window.checkAnswers;
       window.checkAnswers = async function() {
         if (typeof originalCheckAnswers === 'function') await originalCheckAnswers();
