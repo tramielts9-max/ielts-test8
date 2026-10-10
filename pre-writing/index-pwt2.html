@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pre-Writing Task 2 - AI Essay Coach & Sửa bài 2 tầng - Trạm IELTS</title>
   
-  <!-- Font Plus Jakarta Sans chuẩn Duolingo, hỗ trợ tiếng Việt 100% -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800;900&display=swap" rel="stylesheet">
@@ -73,6 +72,27 @@
           Chấm & Sửa bài 2 tầng &rarr;
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- KHUNG TRỢ GIẢNG AI HỎI ĐÁP & HẠ ĐỘ KHÓ TỪ VỰNG CHO TASK 2 (MỚI BỔ SUNG) -->
+  <div class="pwt2-card" style="margin-bottom: 22px;">
+    <div class="pwt2-card-header">
+      <span class="pwt2-card-title" style="color: #E11D48;">🤖 Trợ Giảng AI: Hỏi Luận Điểm & Giảm Độ Khó Từ Vựng</span>
+      <span style="font-size: 12.5px; font-weight: 800; color: var(--text-muted);">Hỏi thoải mái nhiều câu xếp chồng</span>
+    </div>
+    
+    <div id="qaChatContainer" style="max-height: 280px; overflow-y: auto; padding: 10px; background: #FAF7F2; border: 1.5px solid var(--border-color); border-radius: 14px; margin-bottom: 12px;">
+      <div style="font-size: 13px; color: var(--text-muted); font-weight: 700; text-align: center; padding: 16px;">
+        💡 Em chưa biết triển khai ví dụ hay muốn từ vựng đơn giản hơn? Gõ câu hỏi vào ô bên dưới nhé!
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 8px;">
+      <input type="text" id="qaInputText" placeholder="Ví dụ: Anh gợi ý câu mở đoạn Body 1 đơn giản hơn được không?..." style="flex: 1; padding: 11px 16px; border: 2px solid var(--border-color); border-radius: 12px; font-size: 14px; font-weight: 700; outline: none;" onkeydown="if(event.key==='Enter') window.askPWT2Assistant()">
+      <button type="button" class="btn-3d btn-3d-rose" onclick="window.askPWT2Assistant()" style="padding: 11px 20px; font-size: 13.5px;">
+        Gửi Hỏi AI
+      </button>
     </div>
   </div>
 
