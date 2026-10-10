@@ -1,9 +1,10 @@
 /* ==========================================================================
    reading/css-r/reading.css
    DUOLINGO X TRẠM IELTS THEME SYSTEM (IELTS READING MODULE)
-   - Font chữ chuẩn thi thật IELTS (14.5px)
-   - Layout 3 phần: Bài đọc (Trái) | Câu hỏi (Giữa) | Sidebar Ghi chú & AI (Phải)
-   - Bảng ma trận Radio Grid cho Matching Paragraphs (Chuẩn IDP/BC)
+   - BẢN ĐẦY ĐỦ 100% KHÔNG THIẾU BẤT KỲ CLASS NÀO
+   - Cỡ chữ bài đọc & câu hỏi chuẩn thi (14.5px, không bị to quá mức)
+   - Bố cục Sidebar bên phải cho Gợi ý Socratic & AI
+   - Bảng ma trận Radio Grid cho Matching Paragraphs (A-F)
    ========================================================================== */
 
 :root {
@@ -29,6 +30,7 @@
   --text-muted: #756D68;
 }
 
+/* ÉP 100% THẺ DÙNG CHUNG FONT PLUS JAKARTA SANS */
 *, select, option, input, button, textarea {
   font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
   box-sizing: border-box;
@@ -51,7 +53,7 @@ body {
   padding: 22px 18px 80px 18px;
 }
 
-/* KHUNG CHÍNH CHIA ĐÔI */
+/* BỐ CỤC 2 CỘT CHÍNH */
 .container {
   display: flex;
   gap: 0;
@@ -67,7 +69,7 @@ body {
   background: #FFFFFF;
 }
 
-/* 1. BÀI ĐỌC (PASSAGE) - FONT CHUẨN KHÔNG BỊ TO */
+/* BÀI ĐỌC (PASSAGE) - GIẢM CỠ CHỮ CHUẨN THI */
 .passage-box {
   width: 48%;
   background: #FFFFFF;
@@ -90,7 +92,7 @@ body {
 
 /* THANH KÉO CO GIÃN 2 CỘT */
 .resizer {
-  width: 10px;
+  width: 12px;
   background: #E8E2D8;
   cursor: col-resize;
   position: relative;
@@ -102,11 +104,20 @@ body {
   user-select: none;
   flex-shrink: 0;
 }
-.resizer:hover, .resizer.resizing { background: var(--rd-red); }
-.resizer::after { content: '◄►'; color: #64748B; font-weight: 900; font-size: 9px; }
-.resizer:hover::after { color: #FFFFFF; }
+.resizer:hover, .resizer.resizing {
+  background: var(--rd-red);
+}
+.resizer::after {
+  content: '◄►';
+  color: #64748B;
+  font-weight: 900;
+  font-size: 10px;
+}
+.resizer:hover::after {
+  color: #FFFFFF;
+}
 
-/* 2. KHUNG CÂU HỎI (QUESTION BOX) */
+/* KHUNG CÂU HỎI (QUESTION BOX) */
 .question-box {
   flex: 1;
   width: 52%;
@@ -118,7 +129,7 @@ body {
   line-height: 1.6 !important;
 }
 
-/* BỐ CỤC 2 CỘT TRONG QUESTION BOX (CÂU HỎI BÊN TRÁI + SIDEBAR GHI CHÚ BÊN PHẢI) */
+/* BỐ CỤC 2 CỘT BÊN TRONG QUESTION BOX (CÂU HỎI TRÁI + SIDEBAR PHẢI) */
 .rd-exam-wrapper {
   display: flex;
   gap: 20px;
@@ -143,7 +154,7 @@ body {
   .rd-comments-col { width: 100%; position: static; max-height: none; border-left: none; padding-left: 0; margin-top: 20px; }
 }
 
-/* SIDEBAR HEADER & BUBBLES */
+/* SIDEBAR GHI CHÚ & SOCRATIC & AI */
 .rd-comments-header {
   display: flex;
   justify-content: space-between;
@@ -252,7 +263,43 @@ body {
   margin-top: 2px;
 }
 
-/* LỜI GIẢI CHI TIẾT (KHÔNG BỊ TO ĐÙNG) */
+/* NÚT COMMENT ANCHOR NHỎ */
+.btn-comment-anchor {
+  background: #FFFFFF;
+  color: var(--rd-red);
+  border: 1.5px solid #F8B4B7;
+  border-bottom: 3px solid #F48A8F;
+  padding: 2px 7px;
+  border-radius: 7px;
+  font-size: 11.5px;
+  font-weight: 800;
+  cursor: pointer;
+  margin-left: 6px;
+}
+
+/* TIÊU ĐỀ PHẦN BÀI */
+.section-title {
+  font-weight: 900;
+  font-size: 16px;
+  background: #FDEDEE;
+  color: var(--rd-red);
+  padding: 10px 16px;
+  border-left: 5px solid var(--rd-red);
+  margin: 18px 0 12px 0;
+  border-radius: 0 12px 12px 0;
+}
+
+/* VIỀN ĐÚNG/SAI CHO CÂU HỎI (GIỮ NGUYÊN GỐC 100%) */
+.correct-border {
+  border-color: #22C55E !important;
+  background-color: #F0FDF4 !important;
+}
+.incorrect-border {
+  border-color: #EF4444 !important;
+  background-color: #FFF5F5 !important;
+}
+
+/* LỜI GIẢI CHI TIẾT (GIẢM FONT GỌN GÀNG, KHÔNG BỊ TO ĐÙNG) */
 .explanation {
   background: #FFFDF0;
   border: 1.5px solid #FDE047;
@@ -275,39 +322,69 @@ body {
   font-size: 13.5px !important;
 }
 
-/* NÚT COMMENT ANCHOR NHỎ */
-.btn-comment-anchor {
-  background: #FFFFFF;
-  color: var(--rd-red);
-  border: 1.5px solid #F8B4B7;
-  border-bottom: 3px solid #F48A8F;
-  padding: 2px 7px;
-  border-radius: 7px;
-  font-size: 11.5px;
-  font-weight: 800;
-  cursor: pointer;
-  margin-left: 6px;
-}
-
-/* HIGHLIGHT TEXT ĐỐI CHIẾU */
+/* TEXT HIGHLIGHT ĐỐI CHIẾU SAU KHI NỘP BÀI (GIỮ NGUYÊN 100%) */
 .submitted .hl {
   background-color: #FEF08A;
-  padding: 1px 5px;
+  padding: 2px 6px;
   border-radius: 4px;
   color: #854D0E;
   font-weight: 700;
 }
 .submitted .hl-active {
   background-color: #FDE047 !important;
-  outline: 2px solid #D97706;
+  outline: 2.5px solid #D97706;
   border-radius: 4px;
 }
-
-.btn-3d {
-  font-family: inherit; font-weight: 900; font-size: 14px; text-transform: uppercase;
-  border: none; border-radius: 14px; padding: 10px 20px; cursor: pointer; display: inline-flex;
-  align-items: center; justify-content: center; gap: 8px; text-decoration: none; transition: all 0.08s ease;
+.submitted .kw {
+  background-color: #DCFCE7 !important;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: #166534;
 }
-.btn-3d:active { transform: translateY(2px); }
-.btn-3d-red { background: var(--rd-red); color: #FFFFFF !important; border-bottom: 4px solid var(--rd-red-shadow); }
-.btn-3d-white { background: #FFFFFF; color: var(--text-main) !important; border: 2px solid var(--border-color); border-bottom: 4px solid var(--border-shadow); }
+
+/* CÁC NÚT BẤM 3D CHUNKY (GIỮ NGUYÊN ĐỦ CẢ 3 MÀU ĐỎ/XANH/TRẮNG) */
+.btn-3d {
+  font-family: inherit;
+  font-weight: 900;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  border: none;
+  border-radius: 16px;
+  padding: 10px 20px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-decoration: none;
+  transition: all 0.08s ease;
+  white-space: nowrap;
+}
+.btn-3d:active {
+  transform: translateY(3px);
+  box-shadow: none !important;
+}
+
+.btn-3d-red {
+  background: var(--rd-red);
+  color: #FFFFFF !important;
+  border-bottom: 5px solid var(--rd-red-shadow);
+}
+.btn-3d-red:hover { background: var(--rd-red-hover); }
+
+.btn-3d-green {
+  background: var(--duo-green);
+  color: #FFFFFF !important;
+  border-bottom: 5px solid var(--duo-green-shadow);
+}
+.btn-3d-green:hover { background: #16A34A; }
+
+.btn-3d-white {
+  background: #FFFFFF;
+  color: var(--text-main) !important;
+  border: 2px solid var(--border-color);
+  border-bottom: 4.5px solid var(--border-shadow);
+}
+.btn-3d-white:hover { background: #FAF7F2; }
