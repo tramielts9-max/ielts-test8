@@ -1,6 +1,6 @@
 /**
  * IELTS SPEAKING CONTROLLER & 2-TIER GRADING ENGINE
- * DUOLINGO X TRẠM IELTS - ĐÃ BỎ 100% BIỂU TƯỢNG GÂY LỖI Ô VUÔNG
+ * BẢN FULL ĐẦY ĐỦ 100% - LƯU TỪNG LẦN LÀM, ĐỔI MÀU THẺ & XEM LẠI BÀI CŨ
  */
 
 // 1. MÃ HÓA RUNTIME AUTH KEY
@@ -22,6 +22,7 @@ let currentPart = 1;
 let currentPromptsData = [];
 let selectedPromptItem = null;
 let isCustomMode = false;
+let activePromptKey = null;
 
 // Speech & Recording States
 let recognition = null;
@@ -45,7 +46,32 @@ window.addEventListener('DOMContentLoaded', () => {
   initSpeechRecognition();
 });
 
-// ==================== LẤY LỊCH SỬ TỪ LOCALSTORAGE ====================
+// =========================================================================
+// QUẢN LÝ LƯU TRỮ TỪNG LẦN NÓI & BÀI CHẤM AI (ATTEMPTS: LẦN 1, LẦN 2...)
+// =========================================================================
+function getSpeakingStorageKey(promptKey) {
+  return `ielts_spk_attempts_${promptKey}`;
+}
+
+function getSpeakingAttempts(promptKey) {
+  try {
+    const raw = localStorage.getItem(getSpeakingStorageKey(promptKey));
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveSpeakingAttempt(promptKey, attemptData) {
+  try {
+    const attempts = getSpeakingAttempts(promptKey);
+    attempts.unshift(attemptData); // Lần mới nhất lên đầu
+    localStorage.setItem(getSpeakingStorageKey(promptKey), JSON.stringify(attempts));
+  } catch (e) {
+    console.warn("Lỗi lưu lần nói Speaking:", e);
+  }
+}
+
 function getCompletedRecord(promptId, topicName) {
   try {
     const list = JSON.parse(localStorage.getItem('ielts_local_history') || '[]');
@@ -100,7 +126,8 @@ function renderPortalCards() {
 
   let completedCount = 0;
   currentPromptsData.forEach(item => {
-    if (getCompletedRecord(item.id, item.topic)) completedCount++;
+    const attempts = getSpeakingAttempts(item.id || item.topic);
+    if (attempts.length > 0 || getCompletedRecord(item.id, item.topic)) completedCount++;
   });
 
   const progressBadge = document.getElementById('portalProgressBadge');
@@ -124,12 +151,16 @@ function renderPortalCards() {
   }
 
   container.innerHTML = filtered.map(item => {
+    const promptKey = item.id || item.topic;
+    const attempts = getSpeakingAttempts(promptKey);
     const rec = getCompletedRecord(item.id, item.topic);
-    const isDone = !!rec;
+    const isDone = attempts.length > 0 || !!rec;
+    const count = attempts.length > 0 ? attempts.length : (isDone ? 1 : 0);
+    const latestScore = attempts.length > 0 ? attempts[0].score : (rec?.score || 'Đã luyện');
 
     const statusBadge = isDone
-      ? `<span style="font-size: 13px; font-weight: 900; color: #166534;">
-           ✓ ${rec.score || 'Đã luyện'}
+      ? `<span style="font-size: 12.5px; font-weight: 900; background: #DCFCE7; color: #166534; padding: 2px 8px; border-radius: 6px; border: 1px solid #86EFAC;">
+           ✓ Đã luyện ${count} lần (${latestScore})
          </span>`
       : `<span style="font-size: 12.5px; font-weight: 800; color: var(--text-muted);">
            ● Chưa làm
@@ -155,9 +186,16 @@ function renderPortalCards() {
           </div>
         </div>
 
-        <button onclick="window.startLessonSpeaking('${item.id}')" class="btn-3d ${isDone ? 'btn-3d-green' : 'btn-3d-gold'}" style="width: 100%; padding: 11px; font-size: 13.5px;">
-          ${isDone ? 'Luyện lại & Chấm lại →' : 'Vào luyện nói →'}
-        </button>
+        <div style="display: flex; gap: 8px; margin-top: 10px;">
+          <button onclick="window.startLessonSpeaking('${item.id}')" class="btn-3d ${isDone ? 'btn-3d-green' : 'btn-3d-gold'}" style="flex: 1; padding: 11px; font-size: 13px;">
+            ${isDone ? `+ Luyện tiếp lần ${count + 1}` : 'Vào luyện nói →'}
+          </button>
+          ${isDone ? `
+            <button onclick="window.openPastAttemptsSpeaking('${item.id}')" class="btn-3d btn-3d-white" style="padding: 11px 12px; font-size: 13px;" title="Xem lại bài nói và bài sửa của các lần trước">
+              👁️ Xem (${count})
+            </button>
+          ` : ''}
+        </div>
       </div>
     `;
   }).join('');
@@ -171,6 +209,8 @@ window.startLessonSpeaking = (promptId) => {
   selectedPromptItem = currentPromptsData.find(item => item.id === promptId);
   if (!selectedPromptItem) return;
 
+  activePromptKey = selectedPromptItem.id || selectedPromptItem.topic;
+
   document.getElementById('portalScreen').classList.add('hidden');
   document.getElementById('workspaceScreen').classList.remove('hidden');
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -183,11 +223,20 @@ window.startLessonSpeaking = (promptId) => {
   updateGuideView(selectedPromptItem.guide);
   resetGuideTimer();
   resetRecordingUI();
+  renderWorkspacePastAttemptsBar();
+};
+
+window.openPastAttemptsSpeaking = (promptId) => {
+  window.startLessonSpeaking(promptId);
+  setTimeout(() => {
+    window.viewPastAttemptDetailSpeaking(0);
+  }, 400);
 };
 
 window.startCustomSpeaking = () => {
   isCustomMode = true;
   selectedPromptItem = null;
+  activePromptKey = 'custom_' + Date.now();
 
   document.getElementById('portalScreen').classList.add('hidden');
   document.getElementById('workspaceScreen').classList.remove('hidden');
@@ -202,6 +251,7 @@ window.startCustomSpeaking = () => {
   updateGuideView(null);
   resetGuideTimer();
   resetRecordingUI();
+  renderWorkspacePastAttemptsBar();
 };
 
 window.backToPortalSpeaking = () => {
@@ -212,6 +262,68 @@ window.backToPortalSpeaking = () => {
   document.getElementById('workspaceScreen').classList.add('hidden');
   document.getElementById('portalScreen').classList.remove('hidden');
   renderPortalCards();
+};
+
+// =========================================================================
+// THANH HIỂN THỊ CÁC LẦN LUYỆN NÓI CŨ ĐỂ XEM LẠI BÀI VÀ NHẬN XÉT AI
+// =========================================================================
+function renderWorkspacePastAttemptsBar() {
+  let bar = document.getElementById('spkPastAttemptsBar');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'spkPastAttemptsBar';
+    const container = document.querySelector('.s-container');
+    const promptCard = document.querySelector('.prompt-card');
+    if (container && promptCard) container.insertBefore(bar, promptCard);
+  }
+
+  const attempts = getSpeakingAttempts(activePromptKey);
+  if (attempts.length === 0) {
+    bar.innerHTML = '';
+    return;
+  }
+
+  let html = `
+    <div style="background: #FFFBEB; border: 2px solid #FDE68A; border-radius: 16px; padding: 12px 18px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+      <div>
+        <b style="color: #92400E; font-size: 14px;">📜 Chủ đề này Em đã luyện nói ${attempts.length} lần trước đây:</b>
+        <div style="display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap;">
+  `;
+
+  attempts.forEach((att, idx) => {
+    html += `
+      <button type="button" onclick="window.viewPastAttemptDetailSpeaking(${idx})" style="background: #FFFFFF; border: 1.5px solid #FDE68A; border-bottom: 3px solid #D97706; padding: 4px 10px; border-radius: 8px; font-weight: 800; font-size: 12.5px; cursor: pointer; color: #92400E;">
+        Lần ${att.attemptNum || (attempts.length - idx)}: <b>${att.score}</b> (${att.timestamp.split(' - ')[0]})
+      </button>
+    `;
+  });
+
+  html += `
+        </div>
+      </div>
+      <span style="font-size: 12px; color: #B45309; font-weight: 700;">Nhấp vào lần làm để xem lại bản chấm cũ</span>
+    </div>
+  `;
+
+  bar.innerHTML = html;
+}
+
+window.viewPastAttemptDetailSpeaking = (idx) => {
+  const attempts = getSpeakingAttempts(activePromptKey);
+  const att = attempts[idx];
+  if (!att) return;
+
+  const txtArea = document.getElementById('speechTranscript');
+  if (txtArea) txtArea.value = att.transcript || '';
+
+  const resultBox = document.getElementById('result-box');
+  const resultContent = document.getElementById('result-content');
+  const statusBar = document.getElementById('status-bar');
+
+  resultBox.style.display = 'block';
+  statusBar.innerHTML = `📜 ĐANG XEM LẠI BÀI CHẤM: <b>LẦN ${att.attemptNum || 1}</b> (${att.timestamp}) — Điểm: <b>${att.score}</b>`;
+  resultContent.innerHTML = marked.parse(att.aiFeedback || '');
+  resultBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
 
 function updateGuideView(guide) {
@@ -525,20 +637,35 @@ HÃY XUẤT BÀI CHẤM THEO ĐÚNG CẤU TRÚC 5 PHẦN SAU:
     submitBtn.disabled = false;
     printBtn.style.display = "inline-flex";
 
+    // --- LƯU VÀO ATTEMPTS RIÊNG BIỆT ---
+    const now = new Date();
+    const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} - ${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`;
+    const sName = localStorage.getItem('ielts_student_name') || 'Học viên';
+    const sEmail = localStorage.getItem('ielts_student_email') || '';
+    
+    const bandMatch = fullMarkdown.match(/BAND HIỆN TẠI:\s*([0-9.]+)/i) || fullMarkdown.match(/Band\s*([0-9.]+)/i);
+    const bandScore = bandMatch ? `Band ${bandMatch[1]}` : "Đã hoàn thành";
+
+    const attempts = getSpeakingAttempts(activePromptKey);
+    const newAttemptNum = attempts.length + 1;
+
+    const newAttemptRecord = {
+      attemptNum: newAttemptNum,
+      timestamp: timeStr,
+      score: bandScore,
+      transcript: transcript,
+      aiFeedback: fullMarkdown
+    };
+
+    saveSpeakingAttempt(activePromptKey, newAttemptRecord);
+    renderWorkspacePastAttemptsBar();
+
     // --- LƯU VÀO LOCAL VÀ BẮN LÊN GOOGLE DRIVE ---
     try {
-      const now = new Date();
-      const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} - ${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`;
-      const sName = localStorage.getItem('ielts_student_name') || 'Học viên';
-      const sEmail = localStorage.getItem('ielts_student_email') || '';
-      
-      const bandMatch = fullMarkdown.match(/BAND HIỆN TẠI:\s*([0-9.]+)/i) || fullMarkdown.match(/Band\s*([0-9.]+)/i);
-      const bandScore = bandMatch ? `Band ${bandMatch[1]}` : "Đã hoàn thành";
-
       const attemptSnapshot = {
         id: "attempt_spk_" + Date.now(),
-        timestamp: timeStr,
-        testTitle: `Speaking Part ${currentPart}: ${selectedPromptItem ? selectedPromptItem.topic : 'Tự luyện'}`,
+        timestamp: `${timeStr} (Lần ${newAttemptNum})`,
+        testTitle: `Speaking Part ${currentPart}: ${selectedPromptItem ? selectedPromptItem.topic : 'Tự luyện'} (Lần ${newAttemptNum})`,
         studentName: sName,
         studentEmail: sEmail,
         score: bandScore,
