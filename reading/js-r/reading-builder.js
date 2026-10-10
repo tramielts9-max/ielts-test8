@@ -1,8 +1,53 @@
 /**
- * reading/js-r/reading-builder.js - Module dựng giao diện câu hỏi Reading
- * (BẢN FULL ĐẦY ĐỦ 100% - CHUẨN MA TRẬN RADIO GRID & SIDEBAR GHI CHÚ BÊN PHẢI)
+ * reading/js-r/reading-builder.js - Module dựng cấu trúc giao diện câu hỏi Reading
+ * (BẢN FULL ĐẦY ĐỦ 100% - KHÔNG THIẾU BẤT KỲ HÀM NÀO)
  */
 
+// 1. CÁC HÀM SOCRATIC GỐC (GIỮ NGUYÊN 100% KHÔNG CẮT BỚT)
+window.toggleSocratic = function(qId) {
+  const bodyEl = document.getElementById(qId + '_soc_body');
+  const btnEl = document.getElementById(qId + '_soc_toggle_btn');
+  if (!bodyEl) return;
+  const isHidden = bodyEl.style.display === 'none';
+  bodyEl.style.display = isHidden ? 'block' : 'none';
+  if (btnEl) btnEl.innerText = isHidden ? '▲ Thu gọn lại' : '▼ Mở gợi ý';
+};
+
+window.nextSocraticStep = function(qId, step, finalAnswer) {
+  var ans = document.getElementById(qId + '_ans_' + step);
+  if (ans) ans.style.display = 'block';
+
+  var inp = document.getElementById(qId + '_in_' + step);
+  if (inp) inp.disabled = true;
+  var btn = document.getElementById(qId + '_btn_' + step);
+  if (btn) {
+    btn.disabled = true;
+    btn.style.opacity = '0.5';
+    btn.style.cursor = 'default';
+  }
+
+  var next = document.getElementById(qId + '_step_' + (step + 1));
+  var badge = document.getElementById(qId + '_badge');
+
+  if (next) {
+    next.style.display = 'block';
+    var totalSteps = badge ? (badge.getAttribute('data-total') || '3') : '3';
+    if (badge) badge.innerText = 'Nấc ' + (step + 1) + '/' + totalSteps;
+    var nextInput = document.getElementById(qId + '_in_' + (step + 1));
+    if (nextInput) setTimeout(function() { nextInput.focus(); }, 100);
+  } else {
+    if (badge) {
+      badge.innerText = '✓ Đã hoàn thành';
+      badge.style.background = '#16a34a';
+      badge.style.color = 'white';
+    }
+    if (finalAnswer) {
+      window.syncUserAnswer(qId, finalAnswer);
+    }
+  }
+};
+
+// 2. CÁC HÀM SIDEBAR GHI CHÚ BÊN PHẢI
 window.activateReadingBubble = function(qId) {
   document.querySelectorAll('.rd-comment-bubble').forEach(b => b.classList.remove('is-active'));
   const target = document.getElementById(`rd_bubble_${qId}`);
@@ -31,14 +76,17 @@ window.saveReadingThought = function(qId, val) {
   if (prev) prev.innerText = val.trim() ? `• ${val.trim().substring(0, 16)}...` : '';
 };
 
-// ĐỒNG BỘ ĐÁP ÁN (HỖ TRỢ CẢ SINGLE, MATRIX VÀ MULTI CHECKBOX)
+// 3. ĐỒNG BỘ ĐÁP ÁN (HỖ TRỢ CẢ SINGLE, MATRIX VÀ CHECKBOX)
 window.syncUserAnswer = function(qId, val) {
   if (val === undefined || val === null) return;
   var cleanVal = String(val).trim();
 
   var textInputs = document.querySelectorAll(`input[id="${qId}_input"]`);
   textInputs.forEach(el => {
-    if (el && el.value !== cleanVal) el.value = cleanVal;
+    if (el && el.value !== cleanVal) {
+      el.value = cleanVal;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    }
   });
 
   var radios = document.querySelectorAll(`input[name="${qId}"]`);
@@ -59,7 +107,7 @@ window.syncUserAnswer = function(qId, val) {
   }
 };
 
-// XỬ LÝ CHỌN ĐÚNG 2 ĐÁP ÁN TRONG DẠNG "CHOOSE TWO"
+// 4. XỬ LÝ CHỌN ĐÚNG 2 ĐÁP ÁN TRONG DẠNG "CHOOSE TWO"
 window.toggleChooseTwoOption = function(groupKey, optKey, maxAllowed = 2) {
   const container = document.getElementById(`choose_two_${groupKey}`);
   if (!container) return;
@@ -67,21 +115,18 @@ window.toggleChooseTwoOption = function(groupKey, optKey, maxAllowed = 2) {
   const checkedBoxes = Array.from(container.querySelectorAll('input[type="checkbox"]:checked'));
   
   if (checkedBoxes.length > maxAllowed) {
-    // Nếu chọn vượt quá 2, hủy chọn cái vừa nhấp
     const currentBox = container.querySelector(`input[value="${optKey}"]`);
     if (currentBox) currentBox.checked = false;
     alert(`⚠️ Dạng bài này yêu cầu chọn chính xác ${maxAllowed} đáp án!`);
     return;
   }
 
-  // Cập nhật giao diện thẻ được chọn
   container.querySelectorAll('.choose-two-item').forEach(item => {
     const cb = item.querySelector('input[type="checkbox"]');
     if (cb && cb.checked) item.classList.add('is-checked');
     else item.classList.remove('is-checked');
   });
 
-  // Ghi kết quả vào input ẩn của từng câu hỏi trong nhóm
   const qIds = container.dataset.qids ? container.dataset.qids.split(',') : [];
   const selectedValues = Array.from(container.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
 
@@ -113,7 +158,7 @@ export function buildReadingHtml(data) {
   const allQIds = [];
 
   data.groups.forEach((group, gIdx) => {
-    paperHtml += `<div class="section-title" style="font-weight:900; font-size:16px; background:#FDEDEE; color:#8B1518; padding:10px 14px; border-left:5px solid #8B1518; margin:16px 0 10px 0; border-radius:0 10px 10px 0;">${group.title}</div>`;
+    paperHtml += `<div class="section-title">${group.title}</div>`;
     if (group.instructions) {
       paperHtml += `<p style="color:var(--text-muted); font-size:13.5px; margin-bottom:12px; line-height:1.5;">${group.instructions}</p>`;
     }
@@ -122,15 +167,12 @@ export function buildReadingHtml(data) {
     const gMeta = (group.title + ' ' + (group.instructions || '')).toLowerCase();
     const isTFNG = gType.includes('tfng') || gMeta.includes('true/false/not given');
     const isYNNG = gType.includes('ynng') || gMeta.includes('yes/no/not given');
-    
-    // NHẬN DIỆN DẠNG BÀI MATCHING PARAGRAPHS A-F (CHUẨN MA TRẬN THI MÁY)
+
     const isMatchingParagraphs = gType.includes('matching_info') || gType.includes('matching_paragraphs') || gMeta.includes('which paragraph') || gMeta.includes('contains the following information');
-    
-    // NHẬN DIỆN DẠNG BÀI CHOOSE TWO (CHỌN 2 TRONG 5)
     const isChooseTwo = gMeta.includes('choose two') || gMeta.includes('choose 2') || (group.questionIds && group.questionIds.length === 2 && Array.isArray(group.options) && group.options.length >= 4);
 
     if (isMatchingParagraphs && (group.options || group.paragraphs || ['A','B','C','D','E','F'])) {
-      // 1. RENDER MA TRẬN RADIO GRID CHUẨN THI IELTS CHÍNH THỨC
+      // BẢNG MA TRẬN RADIO GRID CHUẨN THI CHÍNH THỨC
       const paras = group.paragraphs || (Array.isArray(group.options) ? group.options.map(o => typeof o === 'string' ? o.charAt(0) : o.key) : ['A','B','C','D','E','F']);
       
       paperHtml += `
@@ -166,10 +208,9 @@ export function buildReadingHtml(data) {
       `;
 
     } else if (isChooseTwo && group.options) {
-      // 2. RENDER DẠNG CHOOSE TWO OUT OF FIVE (CHECKBOX GỌN GÀNG)
+      // DẠNG CHOOSE TWO OUT OF FIVE
       const groupKey = `g_${gIdx}`;
       group.questionIds.forEach(id => allQIds.push(id));
-
       const parsedOpts = parseOptionsList(group.options);
 
       paperHtml += `
@@ -188,7 +229,7 @@ export function buildReadingHtml(data) {
       `;
 
     } else if (group.template) {
-      // 3. RENDER SUMMARY / TABLE COMPLETION ĐIỀN TỪ
+      // SUMMARY / TABLE COMPLETION
       let content = group.template;
       group.questionIds.forEach(qId => {
         allQIds.push(qId);
@@ -197,7 +238,7 @@ export function buildReadingHtml(data) {
 
         const inputPart = `
           <span style="display:inline-block; vertical-align:middle; margin:2px 0;">
-            <input type="text" class="fill-input" id="${qId}_input" style="width:${width}; font-weight:700; color:#8B1518; text-align:center;" placeholder="[Câu ${q?.num || qId}]" oninput="window.syncUserAnswer('${qId}', this.value)" onfocus="window.activateReadingBubble('${qId}')">
+            <input type="text" class="fill-input" id="${qId}_input" style="width:${width};" placeholder="[Câu ${q?.num || qId}]" oninput="window.syncUserAnswer('${qId}', this.value)" onfocus="window.activateReadingBubble('${qId}')">
             <button type="button" class="btn-comment-anchor" onclick="window.activateReadingBubble('${qId}')">Ghi chú</button>
           </span>
         `;
@@ -205,14 +246,14 @@ export function buildReadingHtml(data) {
       });
 
       paperHtml += `
-        <div class="unified-notes-card" style="background:#FFFFFF; border:2px solid #E8E2D8; border-radius:14px; padding:16px 20px; margin-bottom:16px; line-height:1.75; font-size:14.5px;">
-          ${(group.noteTitle || group.summaryTitle) ? `<h3 style="margin-top:0; color:#8B1518; font-weight:900; font-size:16px; border-bottom:1.5px solid #E8E2D8; padding-bottom:6px; margin-bottom:10px;">${group.noteTitle || group.summaryTitle}</h3>` : ''}
+        <div class="unified-notes-card">
+          ${(group.noteTitle || group.summaryTitle) ? `<h3>${group.noteTitle || group.summaryTitle}</h3>` : ''}
           <div>${content}</div>
         </div>
       `;
 
     } else {
-      // 4. RENDER CÂU HỎI TRẮC NGHIỆM ĐƠN / TRUE-FALSE-NOT GIVEN
+      // MCQ & TRUE / FALSE / NOT GIVEN
       group.questionIds.forEach(qId => {
         allQIds.push(qId);
         const q = data.questions[qId];
@@ -253,9 +294,9 @@ export function buildReadingHtml(data) {
     }
   });
 
-  paperHtml += `<button type="button" class="btn-3d btn-3d-red" onclick="window.checkAnswers()" style="margin-top:20px; width:100%; padding:14px; font-size:15px;">NỘP BÀI VÀ CHẤM ĐIỂM &rarr;</button>`;
+  paperHtml += `<button type="button" class="btn-submit" onclick="window.checkAnswers()" style="margin-top:20px; width:100%; padding:14px; font-size:15px; background:var(--duo-green); color:white; border:none; border-bottom:4.5px solid var(--duo-green-shadow); border-radius:14px; font-weight:900; cursor:pointer;">CHẤM BÀI VÀ XEM KẾT QUẢ &rarr;</button>`;
 
-  // TẠO TOÀN BỘ SIDEBAR BÊN PHẢI CHỨA SOCRATIC + GHI CHÚ + HỎI AI GEMINI
+  // RENDER TOÀN BỘ SIDEBAR BÊN PHẢI (CHỨA ĐẦY ĐỦ SOCRATIC GỐC, MẠCH SUY NGHĨ, VÀ HỎI AI GEMINI)
   const commentsListHtml = allQIds.map(qId => {
     const q = data.questions[qId];
     const num = q?.num || qId;
@@ -317,7 +358,7 @@ function renderSocraticHtml(qId, q) {
     <div style="background:#FAF7F2; border:1.5px solid var(--border-color); border-radius:8px; padding:8px 10px; margin-bottom:8px;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
         <b style="color:#8B1518; font-size:12px;">🪜 Gợi ý dẫn dắt (Socratic)</b>
-        <span style="font-size:11px; background:#FFFFFF; color:#8B1518; padding:1px 6px; border-radius:6px; font-weight:800; border:1px solid #F8B4B7;">Nấc 1/${total}</span>
+        <span style="font-size:11px; background:#FFFFFF; color:#8B1518; padding:1px 6px; border-radius:6px; font-weight:800; border:1px solid #F8B4B7;" id="${qId}_badge" data-total="${total}">Nấc 1/${total}</span>
       </div>
   `;
 
@@ -333,7 +374,7 @@ function renderSocraticHtml(qId, q) {
         </p>
         <div style="display:flex; gap:4px;">
           <input type="text" id="${qId}_in_${stepNum}" placeholder="Trả lời câu hỏi gợi ý..." style="flex:1; padding:4px 8px; border:1px solid #cbd5e1; border-radius:4px; font-size:11.5px;" onkeydown="if(event.key==='Enter') window.nextSocraticStep('${qId}', ${stepNum}, '${ans}')">
-          <button type="button" style="background:#8B1518; color:white; border:none; padding:4px 10px; border-radius:4px; font-weight:700; cursor:pointer; font-size:11.5px;" onclick="window.nextSocraticStep('${qId}', ${stepNum}, '${ans}')">Gửi</button>
+          <button type="button" id="${qId}_btn_${stepNum}" style="background:#8B1518; color:white; border:none; padding:4px 10px; border-radius:4px; font-weight:700; cursor:pointer; font-size:11.5px;" onclick="window.nextSocraticStep('${qId}', ${stepNum}, '${ans}')">Gửi</button>
         </div>
         <div id="${qId}_ans_${stepNum}" style="display:none; background:#f0fdf4; border-left:3px solid #16a34a; padding:6px 8px; border-radius:4px; margin-top:6px; font-size:11.5px; line-height:1.45;">
           <div style="color:#166534; font-weight:700;">🎯 Hướng dẫn:</div>
