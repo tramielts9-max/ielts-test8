@@ -45,8 +45,8 @@
       const theoryData = await theoryRes.json();
       const exerciseData = await exerciseRes.json();
 
-      // Gọi bộ vẽ giao diện và kích hoạt AI chấm bài
-      const renderer = new LessonRenderer(appContainer, theoryData, exerciseData);
+      // Khởi tạo LessonRenderer với tense để kích hoạt tự động lưu
+      const renderer = new LessonRenderer(appContainer, theoryData, exerciseData, tense);
       renderer.renderAll();
 
     } catch (err) {
